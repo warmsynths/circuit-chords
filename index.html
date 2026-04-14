@@ -6,14 +6,14 @@
     <title>Chord Mapper</title>
     <style>
       :root {
-        --bg-1: #f8f4e9;
-        --bg-2: #f3f7f5;
-        --surface: #ffffffd9;
-        --text: #1f2937;
-        --muted: #5f6c7b;
-        --accent: #0f766e;
-        --accent-2: #b45309;
-        --border: #d7e0e6;
+        --bg-1: #0b0f14;
+        --bg-2: #121922;
+        --surface: #1b2431d9;
+        --text: #e4edf8;
+        --muted: #98a7bd;
+        --accent: #2dd4bf;
+        --accent-2: #f59e0b;
+        --border: #2d3a4d;
       }
 
       * {
@@ -30,8 +30,8 @@
         font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
         color: var(--text);
         background:
-          radial-gradient(1200px 500px at 10% -20%, #fde68a66, transparent 65%),
-          radial-gradient(900px 400px at 90% -10%, #99f6e466, transparent 65%),
+          radial-gradient(1200px 500px at 10% -20%, #22d3ee33, transparent 65%),
+          radial-gradient(900px 400px at 90% -10%, #f59e0b22, transparent 65%),
           linear-gradient(135deg, var(--bg-1), var(--bg-2));
       }
 
@@ -46,8 +46,10 @@
         border: 1px solid var(--border);
         border-radius: 18px;
         padding: 1.25rem;
-        backdrop-filter: blur(4px);
-        box-shadow: 0 10px 35px rgb(2 6 23 / 0.08);
+        backdrop-filter: blur(6px);
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 0.03),
+          0 14px 38px rgb(2 6 23 / 0.55);
       }
 
       h1 {
@@ -64,8 +66,8 @@
   <body>
     <main>
       <div class="panel">
-        <h1>Chord Mapper Input Test</h1>
-        <p>Type a progression and parse it to inspect emitted chord data.</p>
+        <h1>Circuit Chord Forge</h1>
+        <p>Map progressions to playable pad voicings for Circuit Tracks.</p>
         <chord-mapper-app></chord-mapper-app>
       </div>
     </main>

@@ -16,9 +16,9 @@ export class ProgressionStepper extends LitElement {
     }
 
     button {
-      border: 1px solid #d6dce3;
-      background: #fff8ec;
-      color: #2b3340;
+      border: 1px solid #3b4d66;
+      background: linear-gradient(180deg, #1b283a, #131d2c);
+      color: #cad7e8;
       border-radius: 999px;
       padding: 0.55rem 0.9rem;
       font: inherit;
@@ -29,14 +29,15 @@ export class ProgressionStepper extends LitElement {
 
     button:hover {
       transform: translateY(-1px);
-      border-color: #b45309;
+      border-color: #2dd4bf;
+      color: #e4f7f3;
     }
 
     button.active {
-      background: #0f766e;
-      color: white;
-      border-color: #0f766e;
-      box-shadow: 0 8px 20px rgb(15 118 110 / 0.25);
+      background: linear-gradient(180deg, #2dd4bf, #0f766e);
+      color: #f0fdfa;
+      border-color: #2dd4bf;
+      box-shadow: 0 8px 20px rgb(45 212 191 / 0.28);
     }
   `;
 

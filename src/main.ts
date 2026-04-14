@@ -26,11 +26,13 @@ class ChordMapperApp extends LitElement {
     }
 
     .panel {
-      border: 1px solid #d7e0e6;
+      border: 1px solid #2d3a4d;
       border-radius: 18px;
       padding: 1rem;
-      background: rgb(255 255 255 / 0.82);
-      box-shadow: 0 10px 35px rgb(2 6 23 / 0.06);
+      background: linear-gradient(180deg, rgb(28 37 50 / 0.92), rgb(18 25 35 / 0.92));
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.03),
+        0 10px 30px rgb(2 6 23 / 0.35);
     }
 
     .panel-title {
@@ -39,7 +41,7 @@ class ChordMapperApp extends LitElement {
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #475467;
+      color: #9fb2cb;
     }
 
     .status {
@@ -48,7 +50,7 @@ class ChordMapperApp extends LitElement {
     }
 
     .placeholder {
-      color: #5f6c7b;
+      color: #94a3b8;
       font-size: 0.9rem;
     }
 
@@ -72,15 +74,16 @@ class ChordMapperApp extends LitElement {
     .field label {
       font-size: 0.82rem;
       font-weight: 700;
-      color: #344054;
+      color: #c5d2e3;
     }
 
     .field select {
-      border: 1px solid #d0d5dd;
+      border: 1px solid #3a4a61;
       border-radius: 12px;
       padding: 0.7rem 0.8rem;
       font: inherit;
-      background: white;
+      background: #0f1724;
+      color: #dbe8f8;
     }
 
     .toggle-row {
@@ -90,19 +93,25 @@ class ChordMapperApp extends LitElement {
     }
 
     .toggle-row button {
-      border: 1px solid #d0d5dd;
+      border: 1px solid #3a4a61;
       border-radius: 999px;
       padding: 0.55rem 0.8rem;
       font: inherit;
       font-weight: 700;
-      background: #fff;
+      background: #111b29;
+      color: #c4d3e7;
       cursor: pointer;
     }
 
+    .toggle-row button:hover {
+      border-color: #2dd4bf;
+      color: #e4f7f3;
+    }
+
     .toggle-row button.active {
-      background: #101828;
-      color: white;
-      border-color: #101828;
+      background: linear-gradient(180deg, #2dd4bf, #0f766e);
+      color: #f0fdfa;
+      border-color: #2dd4bf;
     }
 
     .summary-grid {
@@ -112,8 +121,8 @@ class ChordMapperApp extends LitElement {
     }
 
     .summary-card {
-      background: #fff8ec;
-      border: 1px solid #f3d6a4;
+      background: #121c2b;
+      border: 1px solid #314258;
       border-radius: 14px;
       padding: 0.8rem;
     }
@@ -121,34 +130,34 @@ class ChordMapperApp extends LitElement {
     .summary-card strong {
       display: block;
       margin-bottom: 0.25rem;
-      color: #7c2d12;
+      color: #7dd3fc;
     }
 
     .summary-card span {
-      color: #475467;
+      color: #d2dfef;
       font-size: 0.92rem;
     }
 
     .source {
       margin: 0;
       font-size: 0.85rem;
-      color: #667085;
+      color: #97a8c2;
     }
 
     .help-text {
       margin: 0;
       font-size: 0.86rem;
-      color: #475467;
+      color: #9bb0cc;
       line-height: 1.35;
     }
 
     .warning {
       margin: 0;
       font-size: 0.86rem;
-      color: #b42318;
+      color: #fda4af;
       line-height: 1.35;
-      background: #fef3f2;
-      border: 1px solid #fecdd3;
+      background: #3b0d1a;
+      border: 1px solid #9f1239;
       border-radius: 10px;
       padding: 0.55rem 0.65rem;
     }
@@ -168,10 +177,11 @@ class ChordMapperApp extends LitElement {
     .chip {
       border-radius: 999px;
       padding: 0.35rem 0.65rem;
-      background: #eef2f6;
-      color: #344054;
+      background: #1b283a;
+      color: #d3dfef;
       font-size: 0.85rem;
       font-weight: 700;
+      border: 1px solid #33465f;
     }
 
     .legend {
@@ -197,13 +207,13 @@ class ChordMapperApp extends LitElement {
     .legend-root {
       background: linear-gradient(180deg, #2dd4bf, #0f766e);
       color: #f0fdfa;
-      border-color: rgb(153 246 228 / 0.45);
+      border-color: rgb(45 212 191 / 0.45);
     }
 
     .legend-chord {
       background: linear-gradient(180deg, #f59e0b, #b45309);
       color: #fff7ed;
-      border-color: rgb(253 186 116 / 0.45);
+      border-color: rgb(245 158 11 / 0.45);
     }
 
     .legend-dim {
@@ -216,6 +226,12 @@ class ChordMapperApp extends LitElement {
       background: linear-gradient(180deg, #0f172a, #020617);
       color: #f8fafc;
       border-color: #38bdf8;
+    }
+
+    .legend-ring {
+      background: linear-gradient(180deg, #1f2937, #111827);
+      color: #f8fafc;
+      border-color: #94a3b8;
     }
 
     @media (max-width: 820px) {
@@ -246,7 +262,7 @@ class ChordMapperApp extends LitElement {
   };
 
   @state()
-  private voicing: VoicingMode = 'seventh';
+  private voicing: VoicingMode = 'triad';
 
   render() {
     const activeChord = this.progression[this.activeIndex] ?? null;
@@ -309,7 +325,12 @@ class ChordMapperApp extends LitElement {
 
           <div class="field">
             <label for="voicing-select">Voicing</label>
-            <select id="voicing-select" .value=${this.voicing} @change=${this.onVoicingChange}>
+            <select
+              id="voicing-select"
+              .value=${this.voicing}
+              @change=${this.onVoicingChange}
+              @input=${this.onVoicingChange}
+            >
               ${VOICING_OPTIONS.map((voicing) => html`<option value=${voicing}>${voicing}</option>`)}
             </select>
           </div>
@@ -358,10 +379,11 @@ class ChordMapperApp extends LitElement {
               Pads with bright ring and number are voicing pads to press. Change voicing mode to see shape update.
             </p>
             <div class="legend" aria-label="Pad legend">
-              <span class="legend-item legend-root">Root (teal)</span>
-              <span class="legend-item legend-chord">Chord tone (orange)</span>
-              <span class="legend-item legend-dim">Other note (dim)</span>
-              <span class="legend-item legend-target">Ring + number = press for voicing</span>
+              <span class="legend-item legend-ring">Ring + number = pads to press</span>
+              <span class="legend-item legend-chord">Lit = chord tone</span>
+              <span class="legend-item legend-root">Active = root note</span>
+              <span class="legend-item legend-dim">Dim = non-chord note</span>
+              <span class="legend-item legend-target">Dark base = neutral grid style</span>
             </div>
             ${this.progression.length === 0
               ? html`<p class="placeholder">Need parsed chords before pad map can render.</p>`

@@ -28,7 +28,7 @@ export class ChordInput extends LitElement {
     :host {
       display: block;
       font-family: 'Segoe UI', sans-serif;
-      color: #1d2939;
+      color: #dbe7f7;
     }
 
     .wrap {
@@ -42,16 +42,18 @@ export class ChordInput extends LitElement {
     }
 
     input {
-      border: 1px solid #cbd5e1;
+      border: 1px solid #394a61;
       border-radius: 10px;
       padding: 0.75rem 0.875rem;
       font: inherit;
       outline: none;
+      background: #0f1724;
+      color: #e2ebf9;
     }
 
     input:focus {
-      border-color: #0f766e;
-      box-shadow: 0 0 0 2px rgb(15 118 110 / 0.15);
+      border-color: #2dd4bf;
+      box-shadow: 0 0 0 2px rgb(45 212 191 / 0.2);
     }
 
     .actions {
@@ -66,8 +68,8 @@ export class ChordInput extends LitElement {
       padding: 0.6rem 0.9rem;
       font: inherit;
       font-weight: 600;
-      background: #0f766e;
-      color: white;
+      background: linear-gradient(180deg, #2dd4bf, #0f766e);
+      color: #f0fdfa;
       cursor: pointer;
     }
 
@@ -78,7 +80,7 @@ export class ChordInput extends LitElement {
 
     .hint {
       font-size: 0.8rem;
-      color: #475467;
+      color: #93a9c5;
     }
 
     .error {
