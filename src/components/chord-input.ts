@@ -1,0 +1,200 @@
+import { LitElement, css, html } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import { Chord } from 'tonal';
+
+export interface ParsedChord {
+  symbol: string;
+  tonic: string | null;
+  quality: string;
+  notes: string[];
+  intervals: string[];
+  aliases: string[];
+}
+
+export interface ChordInputParsedEventDetail {
+  progression: ParsedChord[];
+  source: string;
+}
+
+/**
+ * Parses a freeform progression string and emits normalized chord data.
+ *
+ * Event emitted: `progression-parsed`
+ * detail: { progression: ParsedChord[]; source: string }
+ */
+@customElement('chord-input')
+export class ChordInput extends LitElement {
+  static styles = css`
+    :host {
+      display: block;
+      font-family: 'Segoe UI', sans-serif;
+      color: #1d2939;
+    }
+
+    .wrap {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    label {
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    input {
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 0.75rem 0.875rem;
+      font: inherit;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #0f766e;
+      box-shadow: 0 0 0 2px rgb(15 118 110 / 0.15);
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 0.6rem 0.9rem;
+      font: inherit;
+      font-weight: 600;
+      background: #0f766e;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: #475467;
+    }
+
+    .error {
+      font-size: 0.8rem;
+      color: #b42318;
+    }
+  `;
+
+  @property({ type: String })
+  value = '';
+
+  @state()
+  private error = '';
+
+  render() {
+    return html`
+      <div class="wrap">
+        <label for="chord-progression">Chord progression</label>
+        <input
+          id="chord-progression"
+          type="text"
+          .value=${this.value}
+          placeholder="Am7 D9 Gmaj7"
+          @input=${this.onInput}
+          @keydown=${this.onKeydown}
+        />
+
+        <div class="actions">
+          <button ?disabled=${!this.value.trim()} @click=${this.parseAndEmit}>Parse</button>
+          <span class="hint">Press Enter to parse</span>
+        </div>
+
+        ${this.error ? html`<div class="error">${this.error}</div>` : null}
+      </div>
+    `;
+  }
+
+  private onInput(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this.value = target.value;
+    if (this.error) this.error = '';
+  }
+
+  private onKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.parseAndEmit();
+    }
+  }
+
+  private parseAndEmit() {
+    const progression = this.parseProgression(this.value);
+
+    if (!progression.length) {
+      this.error = 'No valid chord symbols were found.';
+      return;
+    }
+
+    this.error = '';
+    const detail: ChordInputParsedEventDetail = {
+      progression,
+      source: this.value,
+    };
+
+    this.dispatchEvent(
+      new CustomEvent<ChordInputParsedEventDetail>('progression-parsed', {
+        detail,
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  /**
+   * Uses regex tokenization first, then Tonal chord parsing for musical data.
+   */
+  private parseProgression(source: string): ParsedChord[] {
+    const tokens = this.tokenize(source);
+    const parsed: ParsedChord[] = [];
+
+    for (const symbol of tokens) {
+      const chord = Chord.get(symbol);
+
+      if (chord.empty || chord.notes.length === 0) {
+        continue;
+      }
+
+      parsed.push({
+        symbol,
+        tonic: chord.tonic,
+        quality: chord.quality,
+        notes: chord.notes,
+        intervals: chord.intervals,
+        aliases: chord.aliases,
+      });
+    }
+
+    return parsed;
+  }
+
+  /**
+   * Captures chord-like symbols while ignoring separators such as | and commas.
+   */
+  private tokenize(source: string): string[] {
+    const chordTokenRegex = /[A-G](?:#{1,2}|b{1,2})?(?:[^\s,|/]+)?(?:\/[A-G](?:#{1,2}|b{1,2})?)?/g;
+    const matches = source.match(chordTokenRegex);
+    return matches ? matches.map((token) => token.trim()) : [];
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'chord-input': ChordInput;
+  }
+
+  interface HTMLElementEventMap {
+    'progression-parsed': CustomEvent<ChordInputParsedEventDetail>;
+  }
+}

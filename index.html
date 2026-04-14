@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chord Mapper</title>
+    <style>
+      :root {
+        --bg-1: #f8f4e9;
+        --bg-2: #f3f7f5;
+        --surface: #ffffffd9;
+        --text: #1f2937;
+        --muted: #5f6c7b;
+        --accent: #0f766e;
+        --accent-2: #b45309;
+        --border: #d7e0e6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(1200px 500px at 10% -20%, #fde68a66, transparent 65%),
+          radial-gradient(900px 400px at 90% -10%, #99f6e466, transparent 65%),
+          linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      }
+
+      main {
+        max-width: 960px;
+        margin: 3rem auto;
+        padding: 0 1rem 2rem;
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 1.25rem;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 10px 35px rgb(2 6 23 / 0.08);
+      }
+
+      h1 {
+        margin: 0 0 0.5rem;
+        font-size: clamp(1.35rem, 2.2vw, 2rem);
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="panel">
+        <h1>Chord Mapper Input Test</h1>
+        <p>Type a progression and parse it to inspect emitted chord data.</p>
+        <chord-mapper-app></chord-mapper-app>
+      </div>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
