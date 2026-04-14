@@ -24,11 +24,13 @@
       body {
         margin: 0;
         min-height: 100%;
+        width: 100%;
       }
 
       body {
         font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
         color: var(--text);
+        overflow-x: hidden;
         background:
           radial-gradient(1200px 500px at 10% -20%, #22d3ee33, transparent 65%),
           radial-gradient(900px 400px at 90% -10%, #f59e0b22, transparent 65%),
@@ -36,15 +38,16 @@
       }
 
       main {
-        max-width: 960px;
-        margin: 3rem auto;
-        padding: 0 1rem 2rem;
+        width: 100%;
+        margin: 0;
+        padding: 0 clamp(0.75rem, 2.6vw, 1.25rem);
       }
 
       .panel {
+        width: 100%;
         background: var(--surface);
         border: 1px solid var(--border);
-        border-radius: 18px;
+        border-radius: 0;
         padding: 1.25rem;
         backdrop-filter: blur(6px);
         box-shadow:
@@ -62,13 +65,11 @@
         color: var(--muted);
       }
     </style>
-    <script type="module" crossorigin src="/circuit-chords/assets/index-DJhju__Z.js"></script>
+    <script type="module" crossorigin src="/circuit-chords/assets/index-DDWy8SDd.js"></script>
   </head>
   <body>
     <main>
-      <div class="panel">
-        <chord-mapper-app></chord-mapper-app>
-      </div>
+      <chord-mapper-app></chord-mapper-app>
     </main>
 
   </body>

@@ -241,7 +241,7 @@
     }
   `;Pe([T({attribute:!1})],G.prototype,"pads",2);Pe([T({attribute:!1})],G.prototype,"recipe",2);G=Pe([Q("circuit-grid")],G);const _=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"],Fr=["major","minor","dorian","mixolydian","lydian","phrygian","locrian","harmonic minor","melodic minor","major pentatonic","minor pentatonic","blues"],Vr=_,Wr=["triad","seventh","spread"],Kr=5,Xr=3;function Yr(t,e){const r=X(t?.tonic??e.key)??"C",n=tn(e.key,e.scale),o=nn(r,n),s=new Set((t?.notes??[]).map(i=>X(i)).filter(ht));return Array.from({length:32},(i,c)=>{const a=Math.floor(c/8),d=c%8,m=e.mode==="collapsed"?d+a*Xr:d+a*Kr,l=e.mode==="collapsed"?o[m%o.length]:rn(r,m),p=s.has(l),f=l===r,b=n.includes(l);let k="dim";return f?k="active":p&&(k="lit"),{index:c,row:a,col:d,offset:m,note:l,label:l,state:k,inChord:p,isRoot:f,inScale:b}})}function Zr(t,e,r,n=4){return t?Jr(t,r).map((s,i)=>Qr(s,i,e,r)).filter(s=>!!s).slice(0,n).map(s=>({note:s.note,row:s.row,col:s.col,index:s.index})):[]}function Jr(t,e){const r=new Map,n=[];for(let a=0;a<t.notes.length;a+=1){const d=X(t.notes[a]);if(!d)continue;n.includes(d)||n.push(d);const m=en(t.intervals[a]);m!==null&&!r.has(m)&&r.set(m,d)}const o={triad:[1,3,5],seventh:[1,3,5,7],spread:[1,5,7,3]},s={triad:3,seventh:4,spread:4},i=o[e].map(a=>r.get(a)).filter(a=>!!a);return Array.from(new Set([...i,...n])).slice(0,s[e])}function Qr(t,e,r,n){const o=r.filter(s=>s.note===t).sort((s,i)=>s.offset-i.offset);if(o.length!==0){if(n==="spread"){const s=Math.min(e,o.length-1);return o[s]}return o[0]}}function en(t){if(!t)return null;const e=t.match(/^(\d+)/);if(!e)return null;const r=Number.parseInt(e[1],10);return Number.isFinite(r)?r:null}function tn(t,e){const n=Dr(`${t} ${e}`).notes.map(o=>X(o)).filter(ht);return n.length===0?["C","D","E","F","G","A","B"]:Array.from(new Set(n))}function rn(t,e){const r=mt(t);return r[e%r.length]}function mt(t){const e=_.indexOf(t);return e===-1?_:pt(_,e)}function nn(t,e){const r=_.indexOf(t),n=e.slice().sort((o,s)=>Ue(o,r)-Ue(s,r));return n.length===0?mt(t):n.includes(t)?pt(n,n.indexOf(t)):[t,...n]}function Ue(t,e){const r=_.indexOf(t);return r===-1||e===-1?Number.MAX_SAFE_INTEGER:(r-e+12)%12}function pt(t,e){return[...t.slice(e),...t.slice(0,e)]}function X(t){if(!t)return null;const e=at(t);if(!e)return null;const r=ct(e);return _.includes(r)?r:e}function ht(t){return t!==null}var on=Object.defineProperty,sn=Object.getOwnPropertyDescriptor,E=(t,e,r,n)=>{for(var o=n>1?void 0:n?sn(e,r):e,s=t.length-1,i;s>=0;s--)(i=t[s])&&(o=(n?i(e,r,o):i(o))||o);return n&&o&&on(e,r,o),o};let P=class extends ${constructor(){super(...arguments),this.progression=[],this.source="",this.activeIndex=0,this.config={key:"C",scale:"major",mode:"chromatic"},this.voicing="triad",this.mobileConfigOpen=!1}render(){const t=this.progression[this.activeIndex]??null,e=Yr(t,this.config),r=Zr(t,e,this.voicing),n=this.getMissingChordTones(t,e);return h`
       <div class="mobile-appbar">
-        <div>
+        <div class="mobile-appbar-copy">
           <p class="mobile-appbar-title">Circuit Chord Forge</p>
           <p class="mobile-appbar-subtitle">Map progressions to playable pad voicings for Circuit Tracks.</p>
         </div>
@@ -337,6 +337,10 @@
         </div>
         <p class="help-text">
           Scale Collapse: only notes inside key/scale appear on pads. Chromatic: all 12 notes appear.
+        </p>
+        <p class="mode-note">
+          Current behavior: in Chromatic, scale changes do not alter pad notes. Active chord tonic anchors root,
+          so key mostly affects Collapse mode filtering.
         </p>
         ${this.config.mode==="collapsed"&&e.length>0?h`
               <p class="warning">
@@ -628,6 +632,7 @@
       display: none;
       align-items: center;
       justify-content: space-between;
+      gap: 0.55rem;
       border: 1px solid #2d3a4d;
       border-radius: 14px;
       padding: 0.55rem 0.65rem;
@@ -635,6 +640,11 @@
       box-shadow:
         inset 0 1px 0 rgb(255 255 255 / 0.03),
         0 8px 18px rgb(2 6 23 / 0.3);
+    }
+
+    .mobile-appbar-copy {
+      min-width: 0;
+      flex: 1;
     }
 
     .mobile-appbar-title {
@@ -645,6 +655,7 @@
       letter-spacing: 0.02em;
       line-height: 1.2;
       text-transform: uppercase;
+      overflow-wrap: anywhere;
     }
 
     .mobile-appbar-subtitle {
@@ -652,6 +663,18 @@
       color: #9fb2cb;
       font-size: 0.72rem;
       line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
+    .mode-note {
+      margin: 0;
+      font-size: 0.84rem;
+      color: #d4e4f7;
+      line-height: 1.35;
+      background: #122335;
+      border: 1px solid #35506e;
+      border-radius: 10px;
+      padding: 0.5rem 0.6rem;
     }
 
     .hamburger {

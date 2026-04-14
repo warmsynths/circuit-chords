@@ -254,6 +254,7 @@ class ChordMapperApp extends LitElement {
       display: none;
       align-items: center;
       justify-content: space-between;
+      gap: 0.55rem;
       border: 1px solid #2d3a4d;
       border-radius: 14px;
       padding: 0.55rem 0.65rem;
@@ -261,6 +262,11 @@ class ChordMapperApp extends LitElement {
       box-shadow:
         inset 0 1px 0 rgb(255 255 255 / 0.03),
         0 8px 18px rgb(2 6 23 / 0.3);
+    }
+
+    .mobile-appbar-copy {
+      min-width: 0;
+      flex: 1;
     }
 
     .mobile-appbar-title {
@@ -271,6 +277,7 @@ class ChordMapperApp extends LitElement {
       letter-spacing: 0.02em;
       line-height: 1.2;
       text-transform: uppercase;
+      overflow-wrap: anywhere;
     }
 
     .mobile-appbar-subtitle {
@@ -278,6 +285,18 @@ class ChordMapperApp extends LitElement {
       color: #9fb2cb;
       font-size: 0.72rem;
       line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
+    .mode-note {
+      margin: 0;
+      font-size: 0.84rem;
+      color: #d4e4f7;
+      line-height: 1.35;
+      background: #122335;
+      border: 1px solid #35506e;
+      border-radius: 10px;
+      padding: 0.5rem 0.6rem;
     }
 
     .hamburger {
@@ -421,7 +440,7 @@ class ChordMapperApp extends LitElement {
 
     return html`
       <div class="mobile-appbar">
-        <div>
+        <div class="mobile-appbar-copy">
           <p class="mobile-appbar-title">Circuit Chord Forge</p>
           <p class="mobile-appbar-subtitle">Map progressions to playable pad voicings for Circuit Tracks.</p>
         </div>
@@ -532,6 +551,10 @@ class ChordMapperApp extends LitElement {
         </div>
         <p class="help-text">
           Scale Collapse: only notes inside key/scale appear on pads. Chromatic: all 12 notes appear.
+        </p>
+        <p class="mode-note">
+          Current behavior: in Chromatic, scale changes do not alter pad notes. Active chord tonic anchors root,
+          so key mostly affects Collapse mode filtering.
         </p>
         ${this.config.mode === 'collapsed' && missingChordTones.length > 0
           ? html`
