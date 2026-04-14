@@ -23,6 +23,7 @@ class ChordMapperApp extends LitElement {
       display: grid;
       gap: 1.25rem;
       margin-top: 1rem;
+      overflow-x: clip;
     }
 
     .panel {
@@ -234,7 +235,152 @@ class ChordMapperApp extends LitElement {
       border-color: #94a3b8;
     }
 
-    @media (max-width: 820px) {
+    .mobile-config-trigger {
+      display: none;
+      border: 1px solid #3a4a61;
+      border-radius: 10px;
+      background: #0f1724;
+      color: #dbe8f8;
+      font: inherit;
+      font-weight: 700;
+      width: 40px;
+      height: 36px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .mobile-appbar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #2d3a4d;
+      border-radius: 14px;
+      padding: 0.55rem 0.65rem;
+      background: linear-gradient(180deg, rgb(28 37 50 / 0.92), rgb(18 25 35 / 0.92));
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.03),
+        0 8px 18px rgb(2 6 23 / 0.3);
+    }
+
+    .mobile-appbar-title {
+      margin: 0;
+      color: #d7e4f5;
+      font-size: 0.84rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      line-height: 1.2;
+      text-transform: uppercase;
+    }
+
+    .mobile-appbar-subtitle {
+      margin: 0.15rem 0 0;
+      color: #9fb2cb;
+      font-size: 0.72rem;
+      line-height: 1.2;
+    }
+
+    .hamburger {
+      width: 16px;
+      height: 2px;
+      background: currentColor;
+      position: relative;
+      border-radius: 2px;
+    }
+
+    .hamburger::before,
+    .hamburger::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      width: 16px;
+      height: 2px;
+      background: currentColor;
+      border-radius: 2px;
+    }
+
+    .hamburger::before {
+      top: -5px;
+    }
+
+    .hamburger::after {
+      top: 5px;
+    }
+
+    .mobile-config-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgb(2 6 23 / 0.62);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+      z-index: 20;
+    }
+
+    .mobile-config-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .mobile-config-drawer {
+      position: fixed;
+      right: 0;
+      top: 0;
+      height: 100dvh;
+      width: min(90vw, 360px);
+      padding: 0.75rem;
+      box-sizing: border-box;
+      transform: translateX(calc(100% + 1rem));
+      transition: transform 220ms ease, opacity 180ms ease;
+      z-index: 21;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .mobile-config-drawer.open {
+      transform: translateX(0);
+      pointer-events: auto;
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .mobile-config-panel {
+      height: 100%;
+      overflow: auto;
+    }
+
+    .mobile-config-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .mobile-close {
+      border: 1px solid #3a4a61;
+      border-radius: 999px;
+      background: #0f1724;
+      color: #dbe8f8;
+      font: inherit;
+      font-size: 0.8rem;
+      padding: 0.35rem 0.75rem;
+      cursor: pointer;
+    }
+
+    @media (max-width: 920px) {
+      .mobile-appbar {
+        display: flex;
+      }
+
+      .mobile-config-trigger {
+        display: inline-flex;
+      }
+
+      .desktop-controls {
+        display: none;
+      }
+
       .layout {
         grid-template-columns: 1fr;
       }
@@ -264,6 +410,9 @@ class ChordMapperApp extends LitElement {
   @state()
   private voicing: VoicingMode = 'triad';
 
+  @state()
+  private mobileConfigOpen = false;
+
   render() {
     const activeChord = this.progression[this.activeIndex] ?? null;
     const pads = buildCircuitGrid(activeChord, this.config);
@@ -271,92 +420,28 @@ class ChordMapperApp extends LitElement {
     const missingChordTones = this.getMissingChordTones(activeChord, pads);
 
     return html`
+      <div class="mobile-appbar">
+        <div>
+          <p class="mobile-appbar-title">Circuit Chord Forge</p>
+          <p class="mobile-appbar-subtitle">Map progressions to playable pad voicings for Circuit Tracks.</p>
+        </div>
+        <button
+          class="mobile-config-trigger"
+          aria-label="Open config"
+          @click=${() => this.toggleMobileConfig(true)}
+        >
+          <span class="hamburger" aria-hidden="true"></span>
+        </button>
+      </div>
+
       <section class="panel">
         <p class="panel-title">Progression Input</p>
         <chord-input @progression-parsed=${this.onParsed}></chord-input>
       </section>
 
       <div class="layout">
-        <section class="panel controls">
-          <p class="panel-title">Circuit Config</p>
-
-          <div class="field">
-            <label>Pad Mode</label>
-            <div class="toggle-row">
-              <button
-                class=${this.config.mode === 'collapsed' ? 'active' : ''}
-                @click=${() => this.setMode('collapsed')}
-              >
-                Scale Collapse
-              </button>
-              <button
-                class=${this.config.mode === 'chromatic' ? 'active' : ''}
-                @click=${() => this.setMode('chromatic')}
-              >
-                Chromatic
-              </button>
-            </div>
-            <p class="help-text">
-              Scale Collapse: only notes inside key/scale appear on pads. Chromatic: all 12 notes appear.
-            </p>
-            ${this.config.mode === 'collapsed' && missingChordTones.length > 0
-              ? html`
-                  <p class="warning">
-                    Scale Collapse hides chord tones not in selected scale: ${missingChordTones.join(', ')}.
-                    Switch to Chromatic or change key/scale to include them.
-                  </p>
-                `
-              : null}
-          </div>
-
-          <div class="field">
-            <label for="key-select">Key</label>
-            <select id="key-select" .value=${this.config.key} @change=${this.onKeyChange}>
-              ${KEY_OPTIONS.map((key) => html`<option value=${key}>${key}</option>`)}
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="scale-select">Scale</label>
-            <select id="scale-select" .value=${this.config.scale} @change=${this.onScaleChange}>
-              ${SCALE_OPTIONS.map((scale) => html`<option value=${scale}>${scale}</option>`)}
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="voicing-select">Voicing</label>
-            <select
-              id="voicing-select"
-              .value=${this.voicing}
-              @change=${this.onVoicingChange}
-              @input=${this.onVoicingChange}
-            >
-              ${VOICING_OPTIONS.map((voicing) => html`<option value=${voicing}>${voicing}</option>`)}
-            </select>
-          </div>
-
-          <div class="status">
-            <p class="panel-title">Master Stage</p>
-            ${activeChord
-              ? html`
-                  <div class="summary-grid">
-                    <div class="summary-card">
-                      <strong>Active Chord</strong>
-                      <span>${activeChord.symbol}</span>
-                    </div>
-                    <div class="summary-card">
-                      <strong>Mapped Notes</strong>
-                      <span>${activeChord.notes.join(', ')}</span>
-                    </div>
-                    <div class="summary-card">
-                      <strong>Voicing Mode</strong>
-                      <span>${this.voicing}</span>
-                    </div>
-                  </div>
-                  <p class="source">${this.source}</p>
-                `
-              : html`<p class="placeholder">Parse progression, then select chord.</p>`}
-          </div>
+        <section class="panel controls desktop-controls">
+          ${this.renderConfigSection(activeChord, missingChordTones, 'desktop')}
         </section>
 
         <section class="chips">
@@ -403,7 +488,114 @@ class ChordMapperApp extends LitElement {
             : null}
         </section>
       </div>
+
+      <div
+        class=${`mobile-config-backdrop ${this.mobileConfigOpen ? 'open' : ''}`}
+        @click=${() => this.toggleMobileConfig(false)}
+      ></div>
+      <aside class=${`mobile-config-drawer ${this.mobileConfigOpen ? 'open' : ''}`}>
+        <section class="panel mobile-config-panel">
+          <div class="mobile-config-header">
+            <p class="panel-title">Circuit Config</p>
+            <button class="mobile-close" @click=${() => this.toggleMobileConfig(false)}>Close</button>
+          </div>
+          ${this.renderConfigSection(activeChord, missingChordTones, 'mobile', false)}
+        </section>
+      </aside>
     `;
+  }
+
+  private renderConfigSection(
+    activeChord: ParsedChord | null,
+    missingChordTones: string[],
+    idPrefix: string,
+    showTitle = true
+  ) {
+    return html`
+      ${showTitle ? html`<p class="panel-title">Circuit Config</p>` : null}
+
+      <div class="field">
+        <label>Pad Mode</label>
+        <div class="toggle-row">
+          <button
+            class=${this.config.mode === 'collapsed' ? 'active' : ''}
+            @click=${() => this.setMode('collapsed')}
+          >
+            Scale Collapse
+          </button>
+          <button
+            class=${this.config.mode === 'chromatic' ? 'active' : ''}
+            @click=${() => this.setMode('chromatic')}
+          >
+            Chromatic
+          </button>
+        </div>
+        <p class="help-text">
+          Scale Collapse: only notes inside key/scale appear on pads. Chromatic: all 12 notes appear.
+        </p>
+        ${this.config.mode === 'collapsed' && missingChordTones.length > 0
+          ? html`
+              <p class="warning">
+                Scale Collapse hides chord tones not in selected scale: ${missingChordTones.join(', ')}.
+                Switch to Chromatic or change key/scale to include them.
+              </p>
+            `
+          : null}
+      </div>
+
+      <div class="field">
+        <label for=${`${idPrefix}-key-select`}>Key</label>
+        <select id=${`${idPrefix}-key-select`} .value=${this.config.key} @change=${this.onKeyChange}>
+          ${KEY_OPTIONS.map((key) => html`<option value=${key}>${key}</option>`)}
+        </select>
+      </div>
+
+      <div class="field">
+        <label for=${`${idPrefix}-scale-select`}>Scale</label>
+        <select id=${`${idPrefix}-scale-select`} .value=${this.config.scale} @change=${this.onScaleChange}>
+          ${SCALE_OPTIONS.map((scale) => html`<option value=${scale}>${scale}</option>`)}
+        </select>
+      </div>
+
+      <div class="field">
+        <label for=${`${idPrefix}-voicing-select`}>Voicing</label>
+        <select
+          id=${`${idPrefix}-voicing-select`}
+          .value=${this.voicing}
+          @change=${this.onVoicingChange}
+          @input=${this.onVoicingChange}
+        >
+          ${VOICING_OPTIONS.map((voicing) => html`<option value=${voicing}>${voicing}</option>`)}
+        </select>
+      </div>
+
+      <div class="status">
+        <p class="panel-title">Master Stage</p>
+        ${activeChord
+          ? html`
+              <div class="summary-grid">
+                <div class="summary-card">
+                  <strong>Active Chord</strong>
+                  <span>${activeChord.symbol}</span>
+                </div>
+                <div class="summary-card">
+                  <strong>Mapped Notes</strong>
+                  <span>${activeChord.notes.join(', ')}</span>
+                </div>
+                <div class="summary-card">
+                  <strong>Voicing Mode</strong>
+                  <span>${this.voicing}</span>
+                </div>
+              </div>
+              <p class="source">${this.source}</p>
+            `
+          : html`<p class="placeholder">Parse progression, then select chord.</p>`}
+      </div>
+    `;
+  }
+
+  private toggleMobileConfig(open: boolean) {
+    this.mobileConfigOpen = open;
   }
 
   private setMode(mode: ScaleMode) {
