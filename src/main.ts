@@ -7,10 +7,12 @@ import './components/circuit-grid';
 import type { ChordInputParsedEventDetail, ParsedChord } from './components/chord-input';
 import {
   KEY_OPTIONS,
+  PAD_ANCHOR_OPTIONS,
   SCALE_OPTIONS,
   VOICING_OPTIONS,
   buildChordRecipe,
   buildCircuitGrid,
+  type PadAnchorMode,
   type GridConfig,
   type ScaleMode,
   type VoicingMode,
@@ -424,6 +426,7 @@ class ChordMapperApp extends LitElement {
     key: 'C',
     scale: 'major',
     mode: 'chromatic',
+    anchorMode: 'key',
   };
 
   @state()
@@ -534,6 +537,25 @@ class ChordMapperApp extends LitElement {
       ${showTitle ? html`<p class="panel-title">Circuit Config</p>` : null}
 
       <div class="field">
+        <label>Pad Anchor</label>
+        <div class="toggle-row">
+          ${PAD_ANCHOR_OPTIONS.map(
+            (anchorMode) => html`
+              <button
+                class=${this.config.anchorMode === anchorMode ? 'active' : ''}
+                @click=${() => this.setAnchorMode(anchorMode)}
+              >
+                ${anchorMode === 'key' ? 'Project Key' : 'Chord Root'}
+              </button>
+            `
+          )}
+        </div>
+        <p class="help-text">
+          Project Key keeps pad positions fixed for exact Circuit input. Chord Root recenters each chord to compare shapes.
+        </p>
+      </div>
+
+      <div class="field">
         <label>Pad Mode</label>
         <div class="toggle-row">
           <button
@@ -553,8 +575,8 @@ class ChordMapperApp extends LitElement {
           Scale Collapse: only notes inside key/scale appear on pads. Chromatic: all 12 notes appear.
         </p>
         <p class="mode-note">
-          Current behavior: in Chromatic, scale changes do not alter pad notes. Active chord tonic anchors root,
-          so key mostly affects Collapse mode filtering.
+          In Chromatic, scale does not change pad notes. With Project Key anchor, chord changes move highlights across a fixed grid.
+          With Chord Root anchor, different chords can share same shape positions.
         </p>
         ${this.config.mode === 'collapsed' && missingChordTones.length > 0
           ? html`
@@ -609,6 +631,10 @@ class ChordMapperApp extends LitElement {
                   <strong>Voicing Mode</strong>
                   <span>${this.voicing}</span>
                 </div>
+                <div class="summary-card">
+                  <strong>Pad Anchor</strong>
+                  <span>${this.config.anchorMode}</span>
+                </div>
               </div>
               <p class="source">${this.source}</p>
             `
@@ -619,6 +645,13 @@ class ChordMapperApp extends LitElement {
 
   private toggleMobileConfig(open: boolean) {
     this.mobileConfigOpen = open;
+  }
+
+  private setAnchorMode(anchorMode: PadAnchorMode) {
+    this.config = {
+      ...this.config,
+      anchorMode,
+    };
   }
 
   private setMode(mode: ScaleMode) {

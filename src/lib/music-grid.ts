@@ -1,14 +1,17 @@
+import { get as getVoicing } from '@tonaljs/voicing';
 import { Note, Scale } from 'tonal';
 import type { ParsedChord } from '../components/chord-input';
 
 export type ScaleMode = 'collapsed' | 'chromatic';
 export type PadState = 'dim' | 'lit' | 'active';
 export type VoicingMode = 'triad' | 'seventh' | 'spread';
+export type PadAnchorMode = 'key' | 'chord';
 
 export interface GridConfig {
   key: string;
   scale: string;
   mode: ScaleMode;
+  anchorMode: PadAnchorMode;
 }
 
 export interface CircuitPad {
@@ -56,6 +59,7 @@ export const SCALE_OPTIONS = [
 
 export const KEY_OPTIONS = CHROMATIC_NOTES;
 export const VOICING_OPTIONS: VoicingMode[] = ['triad', 'seventh', 'spread'];
+export const PAD_ANCHOR_OPTIONS: PadAnchorMode[] = ['key', 'chord'];
 
 const CHROMATIC_ROW_STRIDE = 5;
 const COLLAPSED_ROW_STRIDE = 3;
@@ -68,7 +72,8 @@ export interface ChordRecipePad {
 }
 
 export function buildCircuitGrid(chord: ParsedChord | null, config: GridConfig): CircuitPad[] {
-  const root = normalizePitchClass(chord?.tonic ?? config.key) ?? 'C';
+  const anchoredRoot = config.anchorMode === 'chord' ? chord?.tonic ?? config.key : config.key;
+  const root = normalizePitchClass(anchoredRoot) ?? 'C';
   const scaleNotes = getScalePitchClasses(config.key, config.scale);
   const orderedScale = buildOrderedScale(root, scaleNotes);
   const chordNotes = new Set((chord?.notes ?? []).map((note) => normalizePitchClass(note)).filter(isDefined));
@@ -133,6 +138,11 @@ export function buildChordRecipe(
 }
 
 function getVoicingTargets(chord: ParsedChord, voicing: VoicingMode): string[] {
+  const voicedTargets = getVoicingTargetsFromEngine(chord, voicing);
+  if (voicedTargets.length > 0) {
+    return voicedTargets;
+  }
+
   const degreeToNote = new Map<number, string>();
   const orderedUnique: string[] = [];
 
@@ -170,6 +180,52 @@ function getVoicingTargets(chord: ParsedChord, voicing: VoicingMode): string[] {
 
   const merged = Array.from(new Set([...preferred, ...orderedUnique]));
   return merged.slice(0, targetCounts[voicing]);
+}
+
+function getVoicingTargetsFromEngine(chord: ParsedChord, voicing: VoicingMode): string[] {
+  let voiced: string[] = [];
+
+  try {
+    const resolved = getVoicing(chord.symbol);
+    voiced = Array.isArray(resolved) ? resolved : [];
+  } catch {
+    voiced = [];
+  }
+
+  if (voiced.length === 0 && chord.tonic && chord.quality) {
+    try {
+      const resolved = getVoicing(`${chord.tonic}${chord.quality}`);
+      voiced = Array.isArray(resolved) ? resolved : [];
+    } catch {
+      voiced = [];
+    }
+  }
+
+  const pitchClasses = voiced
+    .filter((note): note is string => typeof note === 'string')
+    .map((note) => normalizePitchClass(note))
+    .filter(isDefined);
+
+  const unique = Array.from(new Set(pitchClasses));
+  if (unique.length === 0) {
+    return [];
+  }
+
+  if (voicing === 'triad') {
+    return unique.slice(0, 3);
+  }
+
+  if (voicing === 'seventh') {
+    return unique.slice(0, 4);
+  }
+
+  // Spread uses same voiced tones but wider priority order.
+  const spreadOrder = [0, 2, 3, 1];
+  const spread = spreadOrder
+    .map((index) => unique[index])
+    .filter((note): note is string => Boolean(note));
+
+  return Array.from(new Set(spread)).slice(0, 4);
 }
 
 function selectPadForVoicing(
