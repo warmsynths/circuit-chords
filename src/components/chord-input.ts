@@ -2,17 +2,31 @@ import { LitElement, css, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { Chord } from 'tonal';
 
+/**
+ * Normalized musical metadata extracted from a chord symbol.
+ */
 export interface ParsedChord {
+  /** Chord symbol as entered by the user (for example, Am7 or D/F#). */
   symbol: string;
+  /** Chord tonic pitch class reported by Tonal, if present. */
   tonic: string | null;
+  /** Tonal quality string (major, minor, diminished, etc.). */
   quality: string;
+  /** Concrete pitch classes that form the chord. */
   notes: string[];
+  /** Interval structure reported by Tonal. */
   intervals: string[];
+  /** Known aliases for the parsed chord. */
   aliases: string[];
 }
 
+/**
+ * Payload emitted when a progression is parsed from free text.
+ */
 export interface ChordInputParsedEventDetail {
+  /** Ordered list of successfully parsed chord objects. */
   progression: ParsedChord[];
+  /** Original progression source text as typed by user. */
   source: string;
 }
 
@@ -90,11 +104,18 @@ export class ChordInput extends LitElement {
   `;
 
   @property({ type: String })
+  /** Current raw text in the progression input field. */
   value = '';
 
   @state()
+  /** Inline parse error shown under input when no valid chords are found. */
   private error = '';
 
+  /**
+   * Renders progression input form and parse action controls.
+   *
+   * @returns Lit template for parser UI.
+   */
   render() {
     return html`
       <div class="wrap">
@@ -118,12 +139,22 @@ export class ChordInput extends LitElement {
     `;
   }
 
+  /**
+   * Handles input edits and clears stale error state.
+   *
+   * @param event Native input event from text box.
+   */
   private onInput(event: Event) {
     const target = event.target as HTMLInputElement;
     this.value = target.value;
     if (this.error) this.error = '';
   }
 
+  /**
+   * Allows Enter key to trigger parsing without clicking Parse.
+   *
+   * @param event Keyboard event from the progression input.
+   */
   private onKeydown(event: KeyboardEvent) {
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -131,6 +162,11 @@ export class ChordInput extends LitElement {
     }
   }
 
+  /**
+   * Parses current input value and emits normalized progression event.
+   *
+   * Event name: progression-parsed
+   */
   private parseAndEmit() {
     const progression = this.parseProgression(this.value);
 
@@ -156,6 +192,9 @@ export class ChordInput extends LitElement {
 
   /**
    * Uses regex tokenization first, then Tonal chord parsing for musical data.
+    *
+    * @param source Freeform progression text.
+    * @returns Parsed chord collection in original order.
    */
   private parseProgression(source: string): ParsedChord[] {
     const tokens = this.tokenize(source);
@@ -183,6 +222,9 @@ export class ChordInput extends LitElement {
 
   /**
    * Captures chord-like symbols while ignoring separators such as | and commas.
+    *
+    * @param source Freeform progression text.
+    * @returns Tokenized chord-like strings suitable for Tonal parsing.
    */
   private tokenize(source: string): string[] {
     const chordTokenRegex = /[A-G](?:#{1,2}|b{1,2})?(?:[^\s,|/]+)?(?:\/[A-G](?:#{1,2}|b{1,2})?)?/g;

@@ -2,6 +2,9 @@ import { LitElement, css, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import type { ChordRecipePad, CircuitPad } from '../lib/music-grid';
 
+/**
+ * Visual pad renderer that mirrors Circuit-style grid and highlights chord recipe steps.
+ */
 @customElement('circuit-grid')
 export class CircuitGrid extends LitElement {
   static styles = css`
@@ -23,6 +26,15 @@ export class CircuitGrid extends LitElement {
       display: grid;
       grid-template-columns: repeat(8, minmax(0, 1fr));
       gap: 0.7rem;
+    }
+
+    .gap {
+      aspect-ratio: 1;
+      border-radius: 16px;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      pointer-events: none;
     }
 
     .pad {
@@ -102,11 +114,18 @@ export class CircuitGrid extends LitElement {
   `;
 
   @property({ attribute: false })
+  /** Full 32-pad model with note/state metadata for display. */
   pads: CircuitPad[] = [];
 
   @property({ attribute: false })
+  /** Ordered subset of target pads to press for current chord voicing. */
   recipe: ChordRecipePad[] = [];
 
+  /**
+   * Renders pad grid and overlays press order markers for recipe targets.
+   *
+   * @returns Lit template for pad grid.
+   */
   render() {
     const recipeOrder = new Map<number, number>(
       this.recipe.map((pad, index) => [pad.index, index + 1])
@@ -117,6 +136,10 @@ export class CircuitGrid extends LitElement {
         <div class="grid" role="grid" aria-label="Circuit pad grid">
           ${this.pads.map(
             (pad) => {
+              if (!pad.note) {
+                return html`<div class="gap" aria-hidden="true"></div>`;
+              }
+
               const step = recipeOrder.get(pad.index);
               return html`
               <div class=${`pad ${pad.state} ${step ? 'target' : ''}`} role="gridcell" aria-label=${this.getAriaLabel(pad, step)}>
@@ -136,7 +159,18 @@ export class CircuitGrid extends LitElement {
     `;
   }
 
+  /**
+   * Builds accessible description for each grid cell.
+   *
+   * @param pad Pad model.
+   * @param step Optional voicing step number for target pads.
+   * @returns Human-readable aria-label text.
+   */
   private getAriaLabel(pad: CircuitPad, step?: number): string {
+    if (!pad.note) {
+      return `empty slot row ${pad.row + 1} column ${pad.col + 1}`;
+    }
+
     if (step) {
       return `${pad.note} row ${pad.row + 1} column ${pad.col + 1} press order ${step}`;
     }

@@ -1,6 +1,6 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { Note } from 'tonal';
+import { Chord, Interval, Note } from 'tonal';
 import './components/chord-input';
 import './components/progression-stepper';
 import './components/circuit-grid';
@@ -18,6 +18,10 @@ import {
   type VoicingMode,
 } from './lib/music-grid';
 
+/**
+ * Root application component that binds progression parsing, key/scale settings,
+ * grid mapping, and chord voicing guidance into one interactive workflow.
+ */
 @customElement('chord-mapper-app')
 class ChordMapperApp extends LitElement {
   static styles = css`
@@ -413,15 +417,23 @@ class ChordMapperApp extends LitElement {
   `;
 
   @state()
+  /** Original parsed progression as entered by user. */
   private progression: ParsedChord[] = [];
 
   @state()
+  /** Baseline key captured at parse time for transposition deltas. */
+  private originalKey = 'C';
+
+  @state()
+  /** Raw progression source string shown in status panel. */
   private source = '';
 
   @state()
+  /** Selected chord index in progression stepper. */
   private activeIndex = 0;
 
   @state()
+  /** Active grid/key configuration for mapping and display. */
   private config: GridConfig = {
     key: 'C',
     scale: 'major',
@@ -430,16 +442,25 @@ class ChordMapperApp extends LitElement {
   };
 
   @state()
+  /** Selected voicing mode for recipe target generation. */
   private voicing: VoicingMode = 'triad';
 
   @state()
+  /** Controls visibility of mobile configuration drawer. */
   private mobileConfigOpen = false;
 
+  /**
+   * Renders app shell, controls, progression stepper, and mapped grid output.
+   *
+   * @returns Lit template representing the full application UI.
+   */
   render() {
-    const activeChord = this.progression[this.activeIndex] ?? null;
+    const transposedProgression = this.getTransposedProgression();
+    const activeChord = transposedProgression[this.activeIndex] ?? null;
     const pads = buildCircuitGrid(activeChord, this.config);
     const recipe = buildChordRecipe(activeChord, pads, this.voicing);
     const missingChordTones = this.getMissingChordTones(activeChord, pads);
+    const showKeyProgression = this.originalKey !== this.config.key;
 
     return html`
       <div class="mobile-appbar">
@@ -473,7 +494,9 @@ class ChordMapperApp extends LitElement {
               ? html`<p class="placeholder">Chords appear here after parsing.</p>`
               : html`
                   <progression-stepper
-                    .chords=${this.progression}
+                    .originalChords=${this.progression}
+                    .keyChords=${showKeyProgression ? transposedProgression : []}
+                    .keyLabel=${this.config.key}
                     .activeIndex=${this.activeIndex}
                     @chord-selected=${this.onChordSelected}
                   ></progression-stepper>
@@ -527,6 +550,15 @@ class ChordMapperApp extends LitElement {
     `;
   }
 
+  /**
+   * Renders reusable configuration controls for desktop panel and mobile drawer.
+   *
+   * @param activeChord Current active (transposed) chord.
+   * @param missingChordTones Notes not visible in current grid mode.
+   * @param idPrefix Prefix for unique form control IDs.
+   * @param showTitle Whether to render section title inside this block.
+   * @returns Lit template for config controls section.
+   */
   private renderConfigSection(
     activeChord: ParsedChord | null,
     missingChordTones: string[],
@@ -572,7 +604,7 @@ class ChordMapperApp extends LitElement {
           </button>
         </div>
         <p class="help-text">
-          Scale Collapse: only notes inside key/scale appear on pads. Chromatic: all 12 notes appear.
+          Scale Collapse: only notes inside key/scale appear on pads. Chromatic: keyboard layout (top accidentals, bottom naturals).
         </p>
         <p class="mode-note">
           In Chromatic, scale does not change pad notes. With Project Key anchor, chord changes move highlights across a fixed grid.
@@ -643,10 +675,20 @@ class ChordMapperApp extends LitElement {
     `;
   }
 
+  /**
+   * Opens or closes the mobile configuration drawer.
+   *
+   * @param open True to open drawer; false to close.
+   */
   private toggleMobileConfig(open: boolean) {
     this.mobileConfigOpen = open;
   }
 
+  /**
+   * Updates pad anchor behavior (project key vs chord root).
+   *
+   * @param anchorMode Selected anchor mode.
+   */
   private setAnchorMode(anchorMode: PadAnchorMode) {
     this.config = {
       ...this.config,
@@ -654,6 +696,11 @@ class ChordMapperApp extends LitElement {
     };
   }
 
+  /**
+   * Updates grid note mode (collapsed or chromatic).
+   *
+   * @param mode Selected scale mode.
+   */
   private setMode(mode: ScaleMode) {
     this.config = {
       ...this.config,
@@ -661,6 +708,11 @@ class ChordMapperApp extends LitElement {
     };
   }
 
+  /**
+   * Handles key select changes and updates config state.
+   *
+   * @param event Change event from key select control.
+   */
   private onKeyChange(event: Event) {
     const target = event.target as HTMLSelectElement;
     this.config = {
@@ -669,6 +721,11 @@ class ChordMapperApp extends LitElement {
     };
   }
 
+  /**
+   * Handles scale select changes and updates config state.
+   *
+   * @param event Change event from scale select control.
+   */
   private onScaleChange(event: Event) {
     const target = event.target as HTMLSelectElement;
     this.config = {
@@ -677,29 +734,177 @@ class ChordMapperApp extends LitElement {
     };
   }
 
+  /**
+   * Handles voicing select changes and updates voicing mode.
+   *
+   * @param event Change/input event from voicing select control.
+   */
   private onVoicingChange(event: Event) {
     const target = event.target as HTMLSelectElement;
     this.voicing = target.value as VoicingMode;
   }
 
+  /**
+   * Updates currently active chord index from stepper click events.
+   *
+   * @param event Custom event containing selected progression index.
+   */
   private onChordSelected(event: CustomEvent<number>) {
     this.activeIndex = event.detail;
   }
 
+  /**
+   * Handles parsed progression event and initializes key baseline.
+   *
+   * Captures first chord tonic as original key when available, then aligns
+   * project key to that tonic to mirror hardware default behavior.
+   *
+   * @param event Parsed progression payload from chord-input component.
+   */
   private onParsed(event: CustomEvent<ChordInputParsedEventDetail>) {
     this.progression = event.detail.progression;
     this.source = event.detail.source;
     this.activeIndex = 0;
 
     const firstChord = event.detail.progression[0];
+    const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
+    this.originalKey = baseKey;
+
     if (firstChord?.tonic) {
       this.config = {
         ...this.config,
-        key: firstChord.tonic,
+        key: baseKey,
       };
     }
   }
 
+  /**
+   * Builds current progression in selected project key by transposing original.
+   *
+   * @returns Transposed progression, or original progression when no shift exists.
+   */
+  private getTransposedProgression(): ParsedChord[] {
+    if (this.progression.length === 0) {
+      return [];
+    }
+
+    const semitones = this.getKeyShiftSemitones();
+    if (semitones === 0) {
+      return this.progression;
+    }
+
+    return this.progression
+      .map((chord) => this.transposeParsedChord(chord, semitones))
+      .filter((chord): chord is ParsedChord => Boolean(chord));
+  }
+
+  /**
+   * Computes chromatic semitone shift from original key to selected key.
+   *
+   * @returns Positive semitone delta in range 0..11.
+   */
+  private getKeyShiftSemitones(): number {
+    const fromIndex = KEY_OPTIONS.indexOf(this.originalKey);
+    const toIndex = KEY_OPTIONS.indexOf(this.config.key);
+
+    if (fromIndex === -1 || toIndex === -1) {
+      return 0;
+    }
+
+    return (toIndex - fromIndex + 12) % 12;
+  }
+
+  /**
+   * Transposes one parsed chord and reparses it to refreshed note metadata.
+   *
+   * @param chord Source parsed chord in original key.
+   * @param semitones Semitone shift amount.
+   * @returns Transposed parsed chord, or null when symbol cannot be resolved.
+   */
+  private transposeParsedChord(chord: ParsedChord, semitones: number): ParsedChord | null {
+    const transposedSymbol = this.transposeChordSymbol(chord.symbol, semitones);
+    if (!transposedSymbol) {
+      return null;
+    }
+
+    const resolved = Chord.get(transposedSymbol);
+    if (resolved.empty || resolved.notes.length === 0) {
+      return null;
+    }
+
+    return {
+      symbol: transposedSymbol,
+      tonic: resolved.tonic,
+      quality: resolved.quality,
+      notes: resolved.notes,
+      intervals: resolved.intervals,
+      aliases: resolved.aliases,
+    };
+  }
+
+  /**
+   * Transposes chord symbol root (and optional slash bass) by semitone amount.
+   *
+   * @param symbol Chord symbol to transpose.
+   * @param semitones Semitone shift amount.
+   * @returns Transposed chord symbol, or null when parsing fails.
+   */
+  private transposeChordSymbol(symbol: string, semitones: number): string | null {
+    const match = symbol.match(/^([A-G](?:#{1,2}|b{1,2})?)(.*?)(?:\/([A-G](?:#{1,2}|b{1,2})?))?$/);
+    if (!match) {
+      return null;
+    }
+
+    const root = this.transposeNoteName(match[1], semitones);
+    if (!root) {
+      return null;
+    }
+
+    const suffix = match[2] ?? '';
+    const bass = match[3] ? this.transposeNoteName(match[3], semitones) : null;
+    if (match[3] && !bass) {
+      return null;
+    }
+
+    return `${root}${suffix}${bass ? `/${bass}` : ''}`;
+  }
+
+  /**
+   * Transposes note name by semitone amount and normalizes to supported key list.
+   *
+   * @param noteName Note to transpose.
+   * @param semitones Semitone shift amount.
+   * @returns Normalized pitch class or null.
+   */
+  private transposeNoteName(noteName: string, semitones: number): string | null {
+    const interval = Interval.fromSemitones(semitones);
+    const shifted = Note.transpose(noteName, interval);
+    return this.normalizeKey(shifted);
+  }
+
+  /**
+   * Normalizes any note to app key naming convention used in selectors.
+   *
+   * @param note Input note string.
+   * @returns Normalized key pitch class or null when invalid.
+   */
+  private normalizeKey(note: string | null | undefined): string | null {
+    const pitchClass = Note.pitchClass(note ?? '');
+    if (!pitchClass) {
+      return null;
+    }
+
+    const enharmonic = Note.enharmonic(pitchClass);
+    return KEY_OPTIONS.includes(enharmonic) ? enharmonic : null;
+  }
+
+  /**
+   * Finds chord tones that are absent from currently visible pad map.
+   *
+   * @param activeChord Active parsed chord.
+   * @param pads Built grid pads for current config.
+   * @returns Unique chord tones not represented on visible pads.
+   */
   private getMissingChordTones(activeChord: ParsedChord | null, pads: ReturnType<typeof buildCircuitGrid>): string[] {
     if (!activeChord) {
       return [];
@@ -713,6 +918,12 @@ class ChordMapperApp extends LitElement {
     return Array.from(new Set(wanted.filter((note) => !visibleNotes.has(note))));
   }
 
+  /**
+   * Normalizes note names for comparison against grid note labels.
+   *
+   * @param note Input note string.
+   * @returns Enharmonic pitch class, or null when conversion fails.
+   */
   private normalizeGridNote(note: string): string | null {
     const pitchClass = Note.pitchClass(note);
     if (!pitchClass) {
