@@ -190,20 +190,16 @@ export function buildChordRecipe(
 }
 
 /**
- * Derives chord note targets from voicing engine or interval fallback.
+ * Derives chord note targets from interval degrees, then enriches with engine data.
  *
  * @param chord Parsed chord data.
  * @param voicing Desired voicing mode.
  * @returns Ordered pitch classes used for recipe selection.
  */
 function getVoicingTargets(chord: ParsedChord, voicing: VoicingMode): string[] {
-  const voicedTargets = getVoicingTargetsFromEngine(chord, voicing);
-  if (voicedTargets.length > 0) {
-    return voicedTargets;
-  }
-
   const degreeToNote = new Map<number, string>();
   const orderedUnique: string[] = [];
+  const tonic = normalizePitchClass(chord.tonic);
 
   for (let index = 0; index < chord.notes.length; index += 1) {
     const normalized = normalizePitchClass(chord.notes[index]);
@@ -222,9 +218,9 @@ function getVoicingTargets(chord: ParsedChord, voicing: VoicingMode): string[] {
   }
 
   const degreePrefs: Record<VoicingMode, number[]> = {
-    triad: [1, 3, 5],
-    seventh: [1, 3, 5, 7],
-    spread: [1, 5, 7, 3],
+    triad: [3, 5],
+    seventh: [3, 5, 7],
+    spread: [5, 7, 3],
   };
 
   const targetCounts: Record<VoicingMode, number> = {
@@ -233,11 +229,17 @@ function getVoicingTargets(chord: ParsedChord, voicing: VoicingMode): string[] {
     spread: 4,
   };
 
-  const preferred = degreePrefs[voicing]
+  const preferred = Array.from(new Set([tonic, ...degreePrefs[voicing]
     .map((degree) => degreeToNote.get(degree))
-    .filter((note): note is string => Boolean(note));
+    .filter((note): note is string => Boolean(note))]
+    .filter((note): note is string => Boolean(note))));
 
-  const merged = Array.from(new Set([...preferred, ...orderedUnique]));
+  if (preferred.length >= targetCounts[voicing]) {
+    return preferred.slice(0, targetCounts[voicing]);
+  }
+
+  const voicedTargets = getVoicingTargetsFromEngine(chord, voicing);
+  const merged = Array.from(new Set([...preferred, ...voicedTargets, ...orderedUnique]));
   return merged.slice(0, targetCounts[voicing]);
 }
 
