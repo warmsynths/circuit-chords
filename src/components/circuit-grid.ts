@@ -1,6 +1,7 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import type { ChordRecipePad, CircuitPad } from '../lib/music-grid';
+import { playNote } from '../lib/audio';
 
 /**
  * Visual pad renderer that mirrors Circuit-style grid and highlights chord recipe steps.
@@ -50,11 +51,28 @@ export class CircuitGrid extends LitElement {
       letter-spacing: 0.02em;
       background: #233044;
       box-shadow: inset 0 -8px 18px rgb(0 0 0 / 0.25);
-      transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+      transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1), 
+                  box-shadow 120ms cubic-bezier(0.4, 0, 0.2, 1), 
+                  background 120ms cubic-bezier(0.4, 0, 0.2, 1),
+                  border-color 120ms cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      user-select: none;
+      outline: none;
     }
 
     .pad:hover {
-      transform: translateY(-1px);
+      transform: translateY(-2px);
+      border-color: rgba(45, 212, 191, 0.4);
+    }
+
+    .pad:active {
+      transform: translateY(0) scale(0.96);
+      box-shadow: inset 0 4px 12px rgb(0 0 0 / 0.45);
+    }
+
+    .pad:focus-visible {
+      outline: 2px solid #2dd4bf;
+      outline-offset: 2px;
     }
 
     .pad.dim {
@@ -68,10 +86,20 @@ export class CircuitGrid extends LitElement {
       color: #fff7ed;
     }
 
+    .pad.lit:hover {
+      border-color: rgba(253, 224, 71, 0.6);
+      box-shadow: 0 0 24px rgb(245 158 11 / 0.4), inset 0 -8px 18px rgb(120 53 15 / 0.35);
+    }
+
     .pad.active {
       background: linear-gradient(180deg, #2dd4bf, #0f766e);
       box-shadow: 0 0 20px rgb(45 212 191 / 0.34), inset 0 -8px 18px rgb(17 94 89 / 0.38);
       color: white;
+    }
+
+    .pad.active:hover {
+      border-color: rgba(153, 246, 228, 0.6);
+      box-shadow: 0 0 26px rgb(45 212 191 / 0.45), inset 0 -8px 18px rgb(17 94 89 / 0.38);
     }
 
     .meta {
@@ -85,6 +113,13 @@ export class CircuitGrid extends LitElement {
       box-shadow:
         0 0 0 2px rgb(56 189 248 / 0.85),
         0 0 18px rgb(56 189 248 / 0.35),
+        inset 0 -8px 18px rgb(0 0 0 / 0.22);
+    }
+
+    .pad.target:hover {
+      box-shadow:
+        0 0 0 2px rgb(56 189 248 / 0.95),
+        0 0 24px rgb(56 189 248 / 0.5),
         inset 0 -8px 18px rgb(0 0 0 / 0.22);
     }
 
@@ -142,14 +177,21 @@ export class CircuitGrid extends LitElement {
 
               const step = recipeOrder.get(pad.index);
               return html`
-              <div class=${`pad ${pad.state} ${step ? 'target' : ''}`} role="gridcell" aria-label=${this.getAriaLabel(pad, step)}>
+              <div 
+                class=${`pad ${pad.state} ${step ? 'target' : ''}`} 
+                role="button" 
+                tabindex="0"
+                aria-label=${this.getAriaLabel(pad, step)}
+                @click=${() => this.onPadClick(pad)}
+                @keydown=${(e: KeyboardEvent) => this.onPadKeydown(e, pad)}
+              >
                 <div class="pad-inner">
                   ${step ? html`<span class="step">${step}</span>` : null}
                   <div>
-                  <div>${pad.label}</div>
-                  <div class="meta">${pad.row + 1}:${pad.col + 1}</div>
+                    <div>${pad.label}</div>
+                    <div class="meta">${pad.row + 1}:${pad.col + 1}</div>
+                  </div>
                 </div>
-              </div>
               </div>
             `;
             }
@@ -157,6 +199,32 @@ export class CircuitGrid extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  /**
+   * Triggers audio playback for the pad note.
+   */
+  private onPadClick(pad: CircuitPad) {
+    if (pad.midiNote) {
+      playNote(pad.midiNote);
+      this.dispatchEvent(
+        new CustomEvent<CircuitPad>('pad-clicked', {
+          detail: pad,
+          bubbles: true,
+          composed: true,
+        })
+      );
+    }
+  }
+
+  /**
+   * Handles keyboard triggers (Space, Enter) for keyboard accessibility.
+   */
+  private onPadKeydown(e: KeyboardEvent, pad: CircuitPad) {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      this.onPadClick(pad);
+    }
   }
 
   /**
@@ -172,7 +240,7 @@ export class CircuitGrid extends LitElement {
     }
 
     if (step) {
-      return `${pad.note} row ${pad.row + 1} column ${pad.col + 1} press order ${step}`;
+      return `${pad.note} row ${pad.row + 1} column ${pad.col + 1} voicing note ${step} of ${this.recipe.length} (lowest to highest)`;
     }
 
     return `${pad.note} row ${pad.row + 1} column ${pad.col + 1} ${pad.state}`;
@@ -184,3 +252,4 @@ declare global {
     'circuit-grid': CircuitGrid;
   }
 }
+

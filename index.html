@@ -3,17 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chord Mapper</title>
+    <title>Circuit Chord Forge - Novation Circuit Tracks Chord Mapper</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
       :root {
-        --bg-1: #0b0f14;
-        --bg-2: #121922;
-        --surface: #1b2431d9;
-        --text: #e4edf8;
-        --muted: #98a7bd;
+        --bg-1: #080c10;
+        --bg-2: #0f1520;
+        --surface: rgba(22, 30, 44, 0.7);
+        --text: #e2ebf6;
+        --muted: #64748b;
         --accent: #2dd4bf;
         --accent-2: #f59e0b;
-        --border: #2d3a4d;
+        --border: rgba(45, 212, 191, 0.15);
       }
 
       * {
@@ -28,13 +33,14 @@
       }
 
       body {
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         color: var(--text);
         overflow-x: hidden;
         background:
-          radial-gradient(1200px 500px at 10% -20%, #22d3ee33, transparent 65%),
-          radial-gradient(900px 400px at 90% -10%, #f59e0b22, transparent 65%),
+          radial-gradient(1200px 500px at 15% -20%, rgba(45, 212, 191, 0.15), transparent 60%),
+          radial-gradient(900px 400px at 85% -10%, rgba(245, 158, 11, 0.1), transparent 60%),
           linear-gradient(135deg, var(--bg-1), var(--bg-2));
+        background-attachment: fixed;
       }
 
       main {
@@ -43,33 +49,109 @@
         padding: 0 clamp(0.75rem, 2.6vw, 1.25rem);
       }
 
-      .panel {
-        width: 100%;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 0;
-        padding: 1.25rem;
-        backdrop-filter: blur(6px);
-        box-shadow:
-          inset 0 1px 0 rgb(255 255 255 / 0.03),
-          0 14px 38px rgb(2 6 23 / 0.55);
+      /* Premium Header Styles */
+      .app-header {
+        max-width: 1400px;
+        margin: 2rem auto 0;
+        padding: 0 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
       }
 
-      h1 {
-        margin: 0 0 0.5rem;
-        font-size: clamp(1.35rem, 2.2vw, 2rem);
+      @media (max-width: 1024px) {
+        .app-header {
+          display: none;
+        }
       }
 
-      p {
+      .logo-area {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        position: relative;
+      }
+
+      .logo-icon {
+        width: 28px;
+        height: 28px;
+        color: #2dd4bf;
+        filter: drop-shadow(0 0 10px rgba(45, 212, 191, 0.5));
+      }
+
+      .brand {
+        font-size: 1.5rem;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        display: flex;
+        gap: 0.45rem;
+      }
+
+      .brand-forge {
+        color: #e2ebf6;
+      }
+
+      .brand-chords {
+        background: linear-gradient(135deg, #2dd4bf, #00f2fe);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .app-subtitle {
+        font-size: 0.88rem;
+        color: #64748b;
         margin: 0;
+        font-weight: 500;
+      }
+
+      /* Footer */
+      .app-footer {
+        max-width: 1400px;
+        margin: 4rem auto 2rem;
+        padding: 1.5rem;
+        border-top: 1px solid rgba(148, 163, 184, 0.1);
+        text-align: center;
+        font-size: 0.8rem;
         color: var(--muted);
+      }
+
+      .app-footer a {
+        color: #2dd4bf;
+        text-decoration: none;
+        font-weight: 700;
+        transition: color 150ms ease;
+      }
+
+      .app-footer a:hover {
+        color: #ffffff;
+        text-decoration: underline;
       }
     </style>
   </head>
   <body>
+    <header class="app-header">
+      <div class="logo-area">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18V5l12-2v13"></path>
+          <circle cx="6" cy="18" r="3"></circle>
+          <circle cx="18" cy="16" r="3"></circle>
+        </svg>
+        <h1 class="brand">
+          <span class="brand-forge">Circuit</span>
+          <span class="brand-chords">Chord Forge</span>
+        </h1>
+      </div>
+      <p class="app-subtitle">Interactive chord mapping and pad guidance for the Novation Circuit Tracks note view</p>
+    </header>
+
     <main>
       <chord-mapper-app></chord-mapper-app>
     </main>
+
+    <footer class="app-footer">
+      <p>Created by <a href="https://github.com/warmsynths" target="_blank" rel="noopener">Warm Synths</a>. Open source chord visualization utility.</p>
+    </footer>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

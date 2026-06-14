@@ -17,6 +17,7 @@ import {
   type ScaleMode,
   type VoicingMode,
 } from './lib/music-grid';
+import { playChord } from './lib/audio';
 
 /**
  * Root application component that binds progression parsing, key/scale settings,
@@ -27,163 +28,278 @@ class ChordMapperApp extends LitElement {
   static styles = css`
     :host {
       display: grid;
-      gap: 1.25rem;
+      grid-template-columns: 320px 1fr;
+      gap: 1.5rem;
       margin-top: 1rem;
-      overflow-x: clip;
+      align-items: start;
+      max-width: 1400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .sidebar {
+      display: grid;
+      gap: 1.25rem;
+    }
+
+    .workspace {
+      display: grid;
+      gap: 1.25rem;
     }
 
     .panel {
-      border: 1px solid #2d3a4d;
-      border-radius: 18px;
-      padding: 1rem;
-      background: linear-gradient(180deg, rgb(28 37 50 / 0.92), rgb(18 25 35 / 0.92));
+      border: 1px solid rgba(45, 212, 191, 0.15);
+      border-radius: 20px;
+      padding: 1.25rem;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
       box-shadow:
         inset 0 1px 0 rgb(255 255 255 / 0.03),
-        0 10px 30px rgb(2 6 23 / 0.35);
+        0 12px 36px rgb(2 6 23 / 0.45);
     }
 
     .panel-title {
-      margin: 0;
-      font-size: 0.88rem;
+      margin: 0 0 1rem 0;
+      font-size: 0.85rem;
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #9fb2cb;
+      color: #2dd4bf;
+      border-bottom: 1px solid rgba(45, 212, 191, 0.1);
+      padding-bottom: 0.5rem;
     }
 
     .status {
       display: grid;
-      gap: 0.4rem;
+      gap: 0.75rem;
     }
 
     .placeholder {
       color: #94a3b8;
       font-size: 0.9rem;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
-      gap: 1rem;
-      align-items: start;
+      text-align: center;
+      padding: 2rem 1rem;
+      border: 1px dashed rgba(148, 163, 184, 0.25);
+      border-radius: 12px;
+      margin: 0.5rem 0;
     }
 
     .controls {
       display: grid;
-      gap: 0.9rem;
+      gap: 1.2rem;
     }
 
     .field {
       display: grid;
-      gap: 0.4rem;
+      gap: 0.45rem;
     }
 
     .field label {
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       font-weight: 700;
       color: #c5d2e3;
+      letter-spacing: 0.02em;
     }
 
     .field select {
       border: 1px solid #3a4a61;
-      border-radius: 12px;
-      padding: 0.7rem 0.8rem;
+      border-radius: 10px;
+      padding: 0.65rem 0.8rem;
       font: inherit;
       background: #0f1724;
       color: #dbe8f8;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 150ms ease;
+    }
+
+    .field select:focus {
+      border-color: #2dd4bf;
     }
 
     .toggle-row {
       display: flex;
-      gap: 0.6rem;
+      gap: 0.5rem;
       flex-wrap: wrap;
     }
 
     .toggle-row button {
+      flex: 1;
+      min-width: 100px;
       border: 1px solid #3a4a61;
-      border-radius: 999px;
-      padding: 0.55rem 0.8rem;
+      border-radius: 12px;
+      padding: 0.6rem 0.8rem;
       font: inherit;
       font-weight: 700;
+      font-size: 0.82rem;
       background: #111b29;
       color: #c4d3e7;
       cursor: pointer;
+      transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .toggle-row button:hover {
       border-color: #2dd4bf;
       color: #e4f7f3;
+      background: rgba(45, 212, 191, 0.05);
     }
 
     .toggle-row button.active {
       background: linear-gradient(180deg, #2dd4bf, #0f766e);
       color: #f0fdfa;
       border-color: #2dd4bf;
+      box-shadow: 0 4px 12px rgba(45, 212, 191, 0.25);
+    }
+
+    .switch-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .switch-label span {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #c5d2e3;
+    }
+
+    .switch-input {
+      appearance: none;
+      width: 42px;
+      height: 22px;
+      background: #111b29;
+      border: 1px solid #3a4a61;
+      border-radius: 999px;
+      position: relative;
+      outline: none;
+      cursor: pointer;
+      transition: background 150ms ease, border-color 150ms ease;
+    }
+
+    .switch-input:checked {
+      background: #2dd4bf;
+      border-color: #2dd4bf;
+    }
+
+    .switch-input::before {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #94a3b8;
+      top: 2px;
+      left: 2px;
+      transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1), background-color 150ms ease;
+    }
+
+    .switch-input:checked::before {
+      transform: translateX(20px);
+      background: #ffffff;
     }
 
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.75rem;
+      gap: 0.65rem;
     }
 
     .summary-card {
-      background: #121c2b;
-      border: 1px solid #314258;
-      border-radius: 14px;
-      padding: 0.8rem;
+      background: rgba(18, 28, 43, 0.6);
+      border: 1px solid rgba(49, 66, 88, 0.4);
+      border-radius: 12px;
+      padding: 0.65rem;
+      display: flex;
+      flex-direction: column;
     }
 
     .summary-card strong {
       display: block;
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.15rem;
       color: #7dd3fc;
+      font-size: 0.72rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
     }
 
     .summary-card span {
       color: #d2dfef;
-      font-size: 0.92rem;
+      font-size: 0.95rem;
+      font-weight: 700;
     }
 
     .source {
       margin: 0;
-      font-size: 0.85rem;
-      color: #97a8c2;
+      font-size: 0.78rem;
+      color: #64748b;
+      font-family: monospace;
+      overflow-wrap: break-word;
     }
 
-    .help-text {
+    .help-details {
+      margin-top: 0.2rem;
+      background: rgba(30, 41, 59, 0.3);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 8px;
+    }
+
+    .help-details summary {
+      padding: 0.35rem 0.5rem;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: #94a3b8;
+      cursor: pointer;
+      user-select: none;
+      outline: none;
+    }
+
+    .help-details p {
+      padding: 0 0.5rem 0.5rem 0.5rem;
       margin: 0;
-      font-size: 0.86rem;
-      color: #9bb0cc;
+      font-size: 0.74rem;
+      color: #64748b;
       line-height: 1.35;
+    }
+
+    .mode-note {
+      margin: 0;
+      font-size: 0.76rem;
+      color: #94a3b8;
+      line-height: 1.4;
+      background: rgba(18, 35, 53, 0.5);
+      border: 1px solid rgba(53, 80, 110, 0.3);
+      border-radius: 10px;
+      padding: 0.6rem;
     }
 
     .warning {
       margin: 0;
-      font-size: 0.86rem;
+      font-size: 0.78rem;
       color: #fda4af;
-      line-height: 1.35;
-      background: #3b0d1a;
+      line-height: 1.4;
+      background: rgba(59, 13, 26, 0.6);
       border: 1px solid #9f1239;
       border-radius: 10px;
-      padding: 0.55rem 0.65rem;
+      padding: 0.6rem 0.75rem;
     }
 
-    .chips {
-      margin: 0;
+    .chips-container {
       display: grid;
-      gap: 0.45rem;
+      gap: 1.25rem;
     }
 
     .chip-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.45rem;
+      gap: 0.5rem;
+      align-items: center;
     }
 
     .chip {
-      border-radius: 999px;
-      padding: 0.35rem 0.65rem;
+      border-radius: 12px;
+      padding: 0.4rem 0.75rem;
       background: #1b283a;
       color: #d3dfef;
       font-size: 0.85rem;
@@ -191,23 +307,49 @@ class ChordMapperApp extends LitElement {
       border: 1px solid #33465f;
     }
 
+    .play-button {
+      border: none;
+      border-radius: 12px;
+      padding: 0.5rem 1rem;
+      font: inherit;
+      font-weight: 700;
+      font-size: 0.84rem;
+      background: linear-gradient(180deg, #f59e0b, #b45309);
+      color: #fff7ed;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.28);
+      transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .play-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+    }
+
+    .play-button:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+    }
+
     .legend {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
-      margin: 0.45rem 0 0.75rem;
+      margin: 0.6rem 0 0.8rem;
     }
 
     .legend-item {
-      border-radius: 10px;
-      padding: 0.4rem 0.68rem;
-      font-size: 0.78rem;
+      border-radius: 8px;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.72rem;
       font-weight: 700;
       border: 1px solid transparent;
       box-shadow:
-        inset 0 1px 0 rgb(255 255 255 / 0.28),
-        inset 0 -4px 10px rgb(2 6 23 / 0.22),
-        0 2px 6px rgb(2 6 23 / 0.18);
+        inset 0 1px 0 rgb(255 255 255 / 0.15),
+        0 1px 3px rgb(2 6 23 / 0.15);
       letter-spacing: 0.01em;
     }
 
@@ -248,7 +390,6 @@ class ChordMapperApp extends LitElement {
       background: #0f1724;
       color: #dbe8f8;
       font: inherit;
-      font-weight: 700;
       width: 40px;
       height: 36px;
       align-items: center;
@@ -261,13 +402,12 @@ class ChordMapperApp extends LitElement {
       align-items: center;
       justify-content: space-between;
       gap: 0.55rem;
-      border: 1px solid #2d3a4d;
+      border: 1px solid rgba(45, 212, 191, 0.15);
       border-radius: 14px;
-      padding: 0.55rem 0.65rem;
-      background: linear-gradient(180deg, rgb(28 37 50 / 0.92), rgb(18 25 35 / 0.92));
-      box-shadow:
-        inset 0 1px 0 rgb(255 255 255 / 0.03),
-        0 8px 18px rgb(2 6 23 / 0.3);
+      padding: 0.75rem 1rem;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 20px rgb(2 6 23 / 0.35);
     }
 
     .mobile-appbar-copy {
@@ -277,32 +417,18 @@ class ChordMapperApp extends LitElement {
 
     .mobile-appbar-title {
       margin: 0;
-      color: #d7e4f5;
-      font-size: 0.84rem;
+      color: #2dd4bf;
+      font-size: 0.95rem;
       font-weight: 800;
-      letter-spacing: 0.02em;
-      line-height: 1.2;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
-      overflow-wrap: anywhere;
     }
 
     .mobile-appbar-subtitle {
       margin: 0.15rem 0 0;
-      color: #9fb2cb;
+      color: #94a3b8;
       font-size: 0.72rem;
       line-height: 1.2;
-      overflow-wrap: anywhere;
-    }
-
-    .mode-note {
-      margin: 0;
-      font-size: 0.84rem;
-      color: #d4e4f7;
-      line-height: 1.35;
-      background: #122335;
-      border: 1px solid #35506e;
-      border-radius: 10px;
-      padding: 0.5rem 0.6rem;
     }
 
     .hamburger {
@@ -393,7 +519,19 @@ class ChordMapperApp extends LitElement {
       cursor: pointer;
     }
 
-    @media (max-width: 920px) {
+    .chord-inspector {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 1024px) {
+      :host {
+        grid-template-columns: 1fr;
+      }
+
       .mobile-appbar {
         display: flex;
       }
@@ -404,14 +542,6 @@ class ChordMapperApp extends LitElement {
 
       .desktop-controls {
         display: none;
-      }
-
-      .layout {
-        grid-template-columns: 1fr;
-      }
-
-      .summary-grid {
-        grid-template-columns: 1fr;
       }
     }
   `;
@@ -449,6 +579,14 @@ class ChordMapperApp extends LitElement {
   /** Controls visibility of mobile configuration drawer. */
   private mobileConfigOpen = false;
 
+  @state()
+  /** Controls whether chords play automatically when changed. */
+  private autoPlay = true;
+
+  @state()
+  /** Active chord inversion level (0 = Root, 1 = 1st, 2 = 2nd, 3 = 3rd). */
+  private inversion = 0;
+
   /**
    * Renders app shell, controls, progression stepper, and mapped grid output.
    *
@@ -458,14 +596,14 @@ class ChordMapperApp extends LitElement {
     const transposedProgression = this.getTransposedProgression();
     const activeChord = transposedProgression[this.activeIndex] ?? null;
     const pads = buildCircuitGrid(activeChord, this.config);
-    const recipe = buildChordRecipe(activeChord, pads, this.voicing);
+    const recipe = buildChordRecipe(activeChord, pads, this.voicing, this.inversion);
     const missingChordTones = this.getMissingChordTones(activeChord, pads);
     const showKeyProgression = this.originalKey !== this.config.key;
 
     return html`
       <div class="mobile-appbar">
         <div class="mobile-appbar-copy">
-          <p class="mobile-appbar-title">Circuit Chord Forge</p>
+          <h1 class="mobile-appbar-title">Circuit Chord Forge</h1>
           <p class="mobile-appbar-subtitle">Map progressions to playable pad voicings for Circuit Tracks.</p>
         </div>
         <button
@@ -477,17 +615,21 @@ class ChordMapperApp extends LitElement {
         </button>
       </div>
 
-      <section class="panel">
-        <p class="panel-title">Progression Input</p>
-        <chord-input @progression-parsed=${this.onParsed}></chord-input>
-      </section>
-
-      <div class="layout">
-        <section class="panel controls desktop-controls">
+      <!-- Left Sidebar: Settings Column -->
+      <aside class="sidebar desktop-controls">
+        <section class="panel controls">
           ${this.renderConfigSection(activeChord, missingChordTones, 'desktop')}
         </section>
+      </aside>
 
-        <section class="chips">
+      <!-- Right Main Panel: Workspace -->
+      <main class="workspace">
+        <section class="panel">
+          <p class="panel-title">Progression Input</p>
+          <chord-input @progression-parsed=${this.onParsed}></chord-input>
+        </section>
+
+        <section class="chips-container">
           <section class="panel">
             <p class="panel-title">Progression Stepper</p>
             ${this.progression.length === 0
@@ -505,11 +647,11 @@ class ChordMapperApp extends LitElement {
 
           <section class="panel">
             <p class="panel-title">Circuit Tracks Grid</p>
-            <p class="help-text">
-              Pads with bright ring and number are voicing pads to press. Change voicing mode to see shape update.
+            <p class="help-text" style="font-size: 0.8rem; color: #94a3b8; margin: 0 0 0.5rem 0;">
+              Numbered highlights (1 to 4) show the notes of the voicing from lowest to highest pitch. Press all highlighted pads together to play the chord. Click any pad to audition its note.
             </p>
             <div class="legend" aria-label="Pad legend">
-              <span class="legend-item legend-ring">Ring + number = pads to press</span>
+              <span class="legend-item legend-ring">Glow + Number (1-4) = Voicing Notes (Play together)</span>
               <span class="legend-item legend-chord">Lit = chord tone</span>
               <span class="legend-item legend-root">Active = root note</span>
               <span class="legend-item legend-dim">Dim = non-chord note</span>
@@ -523,16 +665,21 @@ class ChordMapperApp extends LitElement {
           ${activeChord
             ? html`
                 <section class="panel">
-                  <p class="panel-title">Active Chord Notes</p>
-                  <div class="chip-row">
-                    ${activeChord.notes.map((note) => html`<span class="chip">${note}</span> `)}
+                  <p class="panel-title">Active Chord Inspector</p>
+                  <div class="chord-inspector">
+                    <div class="chip-row">
+                      <strong style="color: #7dd3fc; margin-right: 0.5rem; text-transform: uppercase; font-size: 0.8rem;">Voiced Notes:</strong>
+                      ${activeChord.notes.map((note) => html`<span class="chip">${note}</span> `)}
+                    </div>
+                    <button class="play-button" @click=${this.playActiveVoicing}>
+                      <span>🔊 Play Voicing</span>
+                    </button>
                   </div>
                 </section>
-
               `
             : null}
         </section>
-      </div>
+      </main>
 
       <div
         class=${`mobile-config-backdrop ${this.mobileConfigOpen ? 'open' : ''}`}
@@ -541,7 +688,7 @@ class ChordMapperApp extends LitElement {
       <aside class=${`mobile-config-drawer ${this.mobileConfigOpen ? 'open' : ''}`}>
         <section class="panel mobile-config-panel">
           <div class="mobile-config-header">
-            <p class="panel-title">Circuit Config</p>
+            <p class="panel-title" style="margin: 0; border: none; padding: 0;">Circuit Config</p>
             <button class="mobile-close" @click=${() => this.toggleMobileConfig(false)}>Close</button>
           </div>
           ${this.renderConfigSection(activeChord, missingChordTones, 'mobile', false)}
@@ -582,9 +729,10 @@ class ChordMapperApp extends LitElement {
             `
           )}
         </div>
-        <p class="help-text">
-          Project Key keeps pad positions fixed for exact Circuit input. Chord Root recenters each chord to compare shapes.
-        </p>
+        <details class="help-details">
+          <summary>What is this?</summary>
+          <p>Project Key keeps pad positions fixed for exact Circuit input. Chord Root recenters each chord to compare shapes.</p>
+        </details>
       </div>
 
       <div class="field">
@@ -603,9 +751,10 @@ class ChordMapperApp extends LitElement {
             Chromatic
           </button>
         </div>
-        <p class="help-text">
-          Scale Collapse: only notes inside key/scale appear on pads. Chromatic: keyboard layout (top accidentals, bottom naturals).
-        </p>
+        <details class="help-details">
+          <summary>What is this?</summary>
+          <p>Scale Collapse: only notes inside key/scale appear on pads. Chromatic: keyboard layout (top accidentals, bottom naturals).</p>
+        </details>
         <p class="mode-note">
           In Chromatic, scale does not change pad notes. With Project Key anchor, chord changes move highlights across a fixed grid.
           With Chord Root anchor, different chords can share same shape positions.
@@ -646,8 +795,39 @@ class ChordMapperApp extends LitElement {
         </select>
       </div>
 
+      <div class="field">
+        <label>Chord Inversion</label>
+        <div class="toggle-row">
+          ${[0, 1, 2, 3].map(
+            (inv) => html`
+              <button
+                class=${this.inversion === inv ? 'active' : ''}
+                @click=${() => this.setInversion(inv)}
+              >
+                ${inv === 0 ? 'Root' : inv === 1 ? '1st' : inv === 2 ? '2nd' : '3rd'}
+              </button>
+            `
+          )}
+        </div>
+        <p class="help-text" style="font-size: 0.72rem; color: #64748b; margin-top: 0.2rem; line-height: 1.3;">
+          Replicates Orchid's Voicing Dial. Shifts the lowest notes up by an octave to cycle through inversions.
+        </p>
+      </div>
+
+      <div class="field">
+        <label class="switch-label">
+          <span>Auto-Play Chords</span>
+          <input 
+            type="checkbox" 
+            class="switch-input" 
+            ?checked=${this.autoPlay} 
+            @change=${this.onAutoPlayToggle} 
+          />
+        </label>
+      </div>
+
       <div class="status">
-        <p class="panel-title">Master Stage</p>
+        <p class="panel-title" style="margin-top: 0.5rem;">Master Stage</p>
         ${activeChord
           ? html`
               <div class="summary-grid">
@@ -656,16 +836,16 @@ class ChordMapperApp extends LitElement {
                   <span>${activeChord.symbol}</span>
                 </div>
                 <div class="summary-card">
-                  <strong>Mapped Notes</strong>
-                  <span>${activeChord.notes.join(', ')}</span>
-                </div>
-                <div class="summary-card">
-                  <strong>Voicing Mode</strong>
+                  <strong>Voicing</strong>
                   <span>${this.voicing}</span>
                 </div>
                 <div class="summary-card">
+                  <strong>Inversion</strong>
+                  <span>${this.inversion === 0 ? 'Root' : this.inversion === 1 ? '1st' : this.inversion === 2 ? '2nd' : '3rd'}</span>
+                </div>
+                <div class="summary-card">
                   <strong>Pad Anchor</strong>
-                  <span>${this.config.anchorMode}</span>
+                  <span>${this.config.anchorMode === 'key' ? 'Project Key' : 'Chord Root'}</span>
                 </div>
               </div>
               <p class="source">${this.source}</p>
@@ -673,6 +853,43 @@ class ChordMapperApp extends LitElement {
           : html`<p class="placeholder">Parse progression, then select chord.</p>`}
       </div>
     `;
+  }
+
+  /**
+   * Plays the notes in the current active voicing recipe.
+   */
+  private playActiveVoicing() {
+    const transposedProgression = this.getTransposedProgression();
+    const activeChord = transposedProgression[this.activeIndex] ?? null;
+    if (!activeChord) return;
+
+    const pads = buildCircuitGrid(activeChord, this.config);
+    const recipe = buildChordRecipe(activeChord, pads, this.voicing, this.inversion);
+    const midiNotes = recipe
+      .map((rPad) => pads.find((p) => p.index === rPad.index)?.midiNote)
+      .filter((note): note is string => Boolean(note));
+
+    if (midiNotes.length > 0) {
+      playChord(midiNotes);
+    }
+  }
+
+  /**
+   * Handles toggle changes for auto-play option.
+   */
+  private onAutoPlayToggle(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this.autoPlay = target.checked;
+  }
+
+  /**
+   * Sets chord inversion level and plays chord if autoplay is enabled.
+   */
+  private setInversion(inversion: number) {
+    this.inversion = inversion;
+    if (this.autoPlay) {
+      setTimeout(() => this.playActiveVoicing(), 20);
+    }
   }
 
   /**
@@ -751,6 +968,9 @@ class ChordMapperApp extends LitElement {
    */
   private onChordSelected(event: CustomEvent<number>) {
     this.activeIndex = event.detail;
+    if (this.autoPlay) {
+      setTimeout(() => this.playActiveVoicing(), 20);
+    }
   }
 
   /**
@@ -775,6 +995,10 @@ class ChordMapperApp extends LitElement {
         ...this.config,
         key: baseKey,
       };
+    }
+
+    if (this.autoPlay && this.progression.length > 0) {
+      setTimeout(() => this.playActiveVoicing(), 50);
     }
   }
 
@@ -930,6 +1154,7 @@ class ChordMapperApp extends LitElement {
       return null;
     }
 
+    const enharmonic = Note.enharmonic(pitchClass);
     return Note.enharmonic(pitchClass);
   }
 }

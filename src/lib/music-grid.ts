@@ -1,5 +1,5 @@
 import { get as getVoicing } from '@tonaljs/voicing';
-import { Note, Scale } from 'tonal';
+import { Note, Scale, Interval } from 'tonal';
 import type { ParsedChord } from '../components/chord-input';
 
 /** Grid display mode for note assignment. */
@@ -49,6 +49,8 @@ export interface CircuitPad {
   isRoot: boolean;
   /** Whether mapped note belongs to selected scale. */
   inScale: boolean;
+  /** Full note name with octave for synth playback. */
+  midiNote: string;
 }
 
 const CHROMATIC_NOTES = [
@@ -119,17 +121,66 @@ export function buildCircuitGrid(chord: ParsedChord | null, config: GridConfig):
   const orderedScale = buildOrderedScale(root, scaleNotes);
   const chordNotes = new Set((chord?.notes ?? []).map((note) => normalizePitchClass(note)).filter(isDefined));
 
+  // Base octave for MIDI note generation
+  const baseOctave = 4;
+
+  // Precompute scale notes with octaves for collapsed mode
+  const scaleNotesWithOctaves: string[] = [];
+  let currentOctave = baseOctave;
+  let prevSemi = -1;
+  for (let i = 0; i < 32; i++) {
+    const pc = orderedScale[i % orderedScale.length];
+    const semi = CHROMATIC_NOTES.indexOf(pc);
+    if (prevSemi !== -1 && semi < prevSemi) {
+      currentOctave++;
+    }
+    scaleNotesWithOctaves.push(`${pc}${currentOctave}`);
+    prevSemi = semi;
+  }
+
   return Array.from({ length: 32 }, (_, index) => {
     const row = Math.floor(index / 8);
     const col = index % 8;
-    const collapsedOffset = col + row * COLLAPSED_ROW_STRIDE;
-    const chromaticOffset = col + row * CHROMATIC_ROW_STRIDE;
+
+    // Invert row vertically for physical note mapping.
+    // row = 0 (top of screen) -> physicalRow = 3 (highest pitches).
+    // row = 3 (bottom of screen) -> physicalRow = 0 (lowest pitches).
+    const physicalRow = 3 - row;
+
+    const collapsedOffset = col + physicalRow * COLLAPSED_ROW_STRIDE;
+    const chromaticOffset = col + physicalRow * CHROMATIC_ROW_STRIDE;
     const offset = config.mode === 'collapsed'
       ? collapsedOffset
       : chromaticOffset;
-    const note = config.mode === 'collapsed'
-      ? orderedScale[offset % orderedScale.length]
-      : getChromaticKeyboardNote(rootIndex, row, col);
+
+    let note = '';
+    let midiNote = '';
+
+    if (config.mode === 'collapsed') {
+      const scaleMidi = scaleNotesWithOctaves[offset % scaleNotesWithOctaves.length] ?? '';
+      midiNote = scaleMidi;
+      note = normalizePitchClass(Note.pitchClass(scaleMidi)) ?? '';
+    } else {
+      // Chromatic mode keyboard band alignment
+      // screen row 3 (physicalRow 0) -> mappedRow 1 (Octave 0 Naturals)
+      // screen row 2 (physicalRow 1) -> mappedRow 0 (Octave 0 Accidentals)
+      // screen row 1 (physicalRow 2) -> mappedRow 3 (Octave 1 Naturals)
+      // screen row 0 (physicalRow 3) -> mappedRow 2 (Octave 1 Accidentals)
+      const mappedRow = (row + 2) % 4;
+
+      const band = Math.floor(mappedRow / 2);
+      const octaveOffset = band * 12;
+      const inTopRow = mappedRow % 2 === 0;
+      const keyboardOffset = inTopRow ? KEYBOARD_TOP_OFFSETS[col] : KEYBOARD_BOTTOM_OFFSETS[col];
+
+      if (keyboardOffset !== null && rootIndex !== -1) {
+        const semitoneShift = keyboardOffset + octaveOffset;
+        const transposedMidi = Note.transpose(`${root}${baseOctave}`, Interval.fromSemitones(semitoneShift));
+        midiNote = transposedMidi;
+        note = normalizePitchClass(Note.pitchClass(transposedMidi)) ?? '';
+      }
+    }
+
     const inChord = chordNotes.has(note);
     const isRoot = note === root;
     const inScale = scaleNotes.includes(note);
@@ -152,6 +203,7 @@ export function buildCircuitGrid(chord: ParsedChord | null, config: GridConfig):
       inChord,
       isRoot,
       inScale,
+      midiNote,
     };
   });
 }
@@ -169,6 +221,7 @@ export function buildChordRecipe(
   chord: ParsedChord | null,
   pads: CircuitPad[],
   voicing: VoicingMode,
+  inversion = 0,
   maxPads = 4
 ): ChordRecipePad[] {
   if (!chord) {
@@ -177,8 +230,8 @@ export function buildChordRecipe(
 
   const uniqueTargets = getVoicingTargets(chord, voicing);
 
-  return uniqueTargets
-    .map((target, position) => selectPadForVoicing(target, position, pads, voicing))
+  const recipe = uniqueTargets
+    .map((target, position) => selectPadForVoicing(target, position, pads, voicing, inversion))
     .filter((pad): pad is CircuitPad => Boolean(pad))
     .slice(0, maxPads)
     .map((pad) => ({
@@ -186,7 +239,14 @@ export function buildChordRecipe(
       row: pad.row,
       col: pad.col,
       index: pad.index,
+      offset: pad.offset,
     }));
+
+  // Sort voicing pads by grid offset (pitch height) so the visual press order
+  // labels (1 to 4) always map from lowest pitch to highest.
+  return recipe
+    .sort((left, right) => left.offset - right.offset)
+    .map(({ note, row, col, index }) => ({ note, row, col, index }));
 }
 
 /**
@@ -309,7 +369,8 @@ function selectPadForVoicing(
   target: string,
   position: number,
   pads: CircuitPad[],
-  voicing: VoicingMode
+  voicing: VoicingMode,
+  inversion = 0
 ): CircuitPad | undefined {
   const candidates = pads
     .filter((pad) => pad.note === target)
@@ -319,12 +380,19 @@ function selectPadForVoicing(
     return undefined;
   }
 
+  const shouldInvert = position < inversion;
+
   if (voicing === 'spread') {
-    const spreadIndex = Math.min(position, candidates.length - 1);
-    return candidates[spreadIndex];
+    let spreadIndex = position;
+    if (shouldInvert) {
+      spreadIndex += 1;
+    }
+    const finalIndex = Math.min(spreadIndex, candidates.length - 1);
+    return candidates[finalIndex];
   }
 
-  return candidates[0];
+  const candidateIndex = shouldInvert ? Math.min(1, candidates.length - 1) : 0;
+  return candidates[candidateIndex];
 }
 
 /**

@@ -41,65 +41,88 @@ export class ChordInput extends LitElement {
   static styles = css`
     :host {
       display: block;
-      font-family: 'Segoe UI', sans-serif;
       color: #dbe7f7;
     }
 
     .wrap {
       display: grid;
-      gap: 0.75rem;
+      gap: 0.5rem;
     }
 
     label {
-      font-size: 0.875rem;
-      font-weight: 600;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #c5d2e3;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
     }
 
     input {
+      flex: 1;
       border: 1px solid #394a61;
-      border-radius: 10px;
-      padding: 0.75rem 0.875rem;
+      border-radius: 12px;
+      padding: 0.7rem 0.875rem;
       font: inherit;
       outline: none;
       background: #0f1724;
       color: #e2ebf9;
+      transition: all 150ms ease;
     }
 
     input:focus {
       border-color: #2dd4bf;
-      box-shadow: 0 0 0 2px rgb(45 212 191 / 0.2);
-    }
-
-    .actions {
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
+      box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.15);
     }
 
     button {
       border: none;
-      border-radius: 10px;
-      padding: 0.6rem 0.9rem;
+      border-radius: 12px;
+      padding: 0.7rem 1.5rem;
       font: inherit;
-      font-weight: 600;
+      font-weight: 700;
       background: linear-gradient(180deg, #2dd4bf, #0f766e);
       color: #f0fdfa;
       cursor: pointer;
+      box-shadow: 0 4px 12px rgba(45, 212, 191, 0.2);
+      transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(45, 212, 191, 0.35);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+      box-shadow: 0 2px 4px rgba(45, 212, 191, 0.15);
     }
 
     button:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
+      box-shadow: none;
     }
 
     .hint {
-      font-size: 0.8rem;
-      color: #93a9c5;
+      font-size: 0.78rem;
+      color: #64748b;
+      margin-top: 0.15rem;
+      line-height: 1.35;
     }
 
     .error {
-      font-size: 0.8rem;
-      color: #b42318;
+      font-size: 0.78rem;
+      color: #fda4af;
+      background: rgba(159, 18, 57, 0.4);
+      border: 1px solid #9f1239;
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      margin-top: 0.25rem;
     }
   `;
 
@@ -119,22 +142,22 @@ export class ChordInput extends LitElement {
   render() {
     return html`
       <div class="wrap">
-        <label for="chord-progression">Chord progression</label>
-        <input
-          id="chord-progression"
-          type="text"
-          .value=${this.value}
-          placeholder="Am7 D9 Gmaj7"
-          @input=${this.onInput}
-          @keydown=${this.onKeydown}
-        />
-
-        <div class="actions">
+        <label for="chord-progression">Chord Progression</label>
+        <div class="input-group">
+          <input
+            id="chord-progression"
+            type="text"
+            .value=${this.value}
+            placeholder="e.g. Cmaj7 Am7 Dm7 G7"
+            @input=${this.onInput}
+            @keydown=${this.onKeydown}
+          />
           <button ?disabled=${!this.value.trim()} @click=${this.parseAndEmit}>Parse</button>
-          <span class="hint">Press Enter to parse</span>
         </div>
 
-        ${this.error ? html`<div class="error">${this.error}</div>` : null}
+        ${this.error 
+          ? html`<div class="error">${this.error}</div>` 
+          : html`<div class="hint">Enter chord symbols separated by spaces (e.g., Cmaj7 Am7 F G9). Press Enter to parse.</div>`}
       </div>
     `;
   }
