@@ -16,11 +16,9 @@ export class CircuitGrid extends LitElement {
     .shell {
       border-radius: 24px;
       padding: 1rem;
-      background:
-        linear-gradient(180deg, #1e293b, #0f172a),
-        radial-gradient(circle at top, rgb(255 255 255 / 0.06), transparent 55%);
-      border: 1px solid rgb(148 163 184 / 0.2);
-      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 18px 40px rgb(15 23 42 / 0.35);
+      background: var(--bg-1);
+      border: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.02), 0 12px 36px rgb(0 0 0 / 0.45);
     }
 
     .grid {
@@ -41,16 +39,16 @@ export class CircuitGrid extends LitElement {
     .pad {
       aspect-ratio: 1;
       border-radius: 16px;
-      border: 1px solid rgb(255 255 255 / 0.08);
+      border: 1px solid var(--border);
       display: grid;
       place-items: center;
       text-align: center;
       padding: 0.3rem;
-      color: #e2e8f0;
+      color: var(--text);
       font-weight: 700;
       letter-spacing: 0.02em;
-      background: #233044;
-      box-shadow: inset 0 -8px 18px rgb(0 0 0 / 0.25);
+      background: var(--bg-2);
+      box-shadow: inset 0 -8px 18px rgb(0 0 0 / 0.2);
       transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1), 
                   box-shadow 120ms cubic-bezier(0.4, 0, 0.2, 1), 
                   background 120ms cubic-bezier(0.4, 0, 0.2, 1),
@@ -62,7 +60,7 @@ export class CircuitGrid extends LitElement {
 
     .pad:hover {
       transform: translateY(-2px);
-      border-color: rgba(45, 212, 191, 0.4);
+      border-color: var(--accent);
     }
 
     .pad:active {
@@ -71,35 +69,36 @@ export class CircuitGrid extends LitElement {
     }
 
     .pad:focus-visible {
-      outline: 2px solid #2dd4bf;
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
 
     .pad.dim {
-      background: linear-gradient(180deg, #334155, #1f2937);
-      color: #cbd5e1;
+      background: var(--pad-dim);
+      color: var(--muted);
+      opacity: 0.8;
     }
 
     .pad.lit {
-      background: linear-gradient(180deg, #f59e0b, #b45309);
-      box-shadow: 0 0 18px rgb(245 158 11 / 0.28), inset 0 -8px 18px rgb(120 53 15 / 0.35);
-      color: #fff7ed;
+      background: var(--pad-lit);
+      box-shadow: 0 0 16px var(--accent-2-glow), inset 0 -8px 18px rgba(0,0,0,0.2);
+      color: #1e1a17;
     }
 
     .pad.lit:hover {
-      border-color: rgba(253, 224, 71, 0.6);
-      box-shadow: 0 0 24px rgb(245 158 11 / 0.4), inset 0 -8px 18px rgb(120 53 15 / 0.35);
+      border-color: var(--accent-2);
+      box-shadow: 0 0 20px var(--accent-2-glow), inset 0 -8px 18px rgba(0,0,0,0.2);
     }
 
     .pad.active {
-      background: linear-gradient(180deg, #2dd4bf, #0f766e);
-      box-shadow: 0 0 20px rgb(45 212 191 / 0.34), inset 0 -8px 18px rgb(17 94 89 / 0.38);
+      background: var(--pad-active);
+      box-shadow: 0 0 18px var(--accent-glow), inset 0 -8px 18px rgba(0,0,0,0.2);
       color: white;
     }
 
     .pad.active:hover {
-      border-color: rgba(153, 246, 228, 0.6);
-      box-shadow: 0 0 26px rgb(45 212 191 / 0.45), inset 0 -8px 18px rgb(17 94 89 / 0.38);
+      border-color: var(--accent-hover);
+      box-shadow: 0 0 22px var(--accent-glow), inset 0 -8px 18px rgba(0,0,0,0.2);
     }
 
     .meta {
@@ -108,19 +107,19 @@ export class CircuitGrid extends LitElement {
     }
 
     .pad.target {
-      outline: 2px solid #f8fafc;
+      outline: 2px solid var(--pad-target);
       outline-offset: 1px;
       box-shadow:
-        0 0 0 2px rgb(56 189 248 / 0.85),
-        0 0 18px rgb(56 189 248 / 0.35),
-        inset 0 -8px 18px rgb(0 0 0 / 0.22);
+        0 0 0 2px var(--accent),
+        0 0 16px var(--accent-glow),
+        inset 0 -8px 18px rgba(0,0,0,0.2);
     }
 
     .pad.target:hover {
       box-shadow:
-        0 0 0 2px rgb(56 189 248 / 0.95),
-        0 0 24px rgb(56 189 248 / 0.5),
-        inset 0 -8px 18px rgb(0 0 0 / 0.22);
+        0 0 0 2px var(--accent-hover),
+        0 0 20px var(--accent-glow),
+        inset 0 -8px 18px rgba(0,0,0,0.2);
     }
 
     .step {
@@ -130,13 +129,13 @@ export class CircuitGrid extends LitElement {
       width: 18px;
       height: 18px;
       border-radius: 999px;
-      background: #f8fafc;
-      color: #0f172a;
+      background: var(--pad-target);
+      color: var(--bg-1);
       font-size: 0.68rem;
       font-weight: 800;
       display: grid;
       place-items: center;
-      border: 1px solid rgb(15 23 42 / 0.2);
+      border: 1px solid var(--border);
     }
 
     .pad-inner {

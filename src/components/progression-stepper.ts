@@ -28,11 +28,12 @@ export class ProgressionStepper extends LitElement {
 
     .row-label {
       margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
       font-size: 0.74rem;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: #91a4bf;
+      color: var(--muted);
     }
 
     .wrap {
@@ -42,28 +43,30 @@ export class ProgressionStepper extends LitElement {
     }
 
     button {
-      border: 1px solid #3b4d66;
-      background: linear-gradient(180deg, #1b283a, #131d2c);
-      color: #cad7e8;
+      border: 1px solid var(--border);
+      background: var(--pad-dim);
+      color: var(--text);
       border-radius: 999px;
       padding: 0.55rem 0.9rem;
       font: inherit;
       font-weight: 700;
       cursor: pointer;
-      transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+      transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1), 
+                  background 120ms cubic-bezier(0.4, 0, 0.2, 1), 
+                  border-color 120ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     button:hover {
       transform: translateY(-1px);
-      border-color: #2dd4bf;
-      color: #e4f7f3;
+      border-color: var(--accent);
+      color: var(--text);
     }
 
     button.active {
-      background: linear-gradient(180deg, #2dd4bf, #0f766e);
-      color: #f0fdfa;
-      border-color: #2dd4bf;
-      box-shadow: 0 8px 20px rgb(45 212 191 / 0.28);
+      background: var(--pad-active);
+      color: var(--text);
+      border-color: var(--accent);
+      box-shadow: 0 4px 12px var(--accent-glow);
     }
   `;
 

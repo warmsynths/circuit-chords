@@ -41,7 +41,7 @@ export class ChordInput extends LitElement {
   static styles = css`
     :host {
       display: block;
-      color: #dbe7f7;
+      color: var(--text);
     }
 
     .wrap {
@@ -50,10 +50,11 @@ export class ChordInput extends LitElement {
     }
 
     label {
-      font-size: 0.82rem;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.8rem;
       font-weight: 700;
-      color: #c5d2e3;
-      letter-spacing: 0.02em;
+      color: var(--muted);
+      letter-spacing: 0.04em;
       text-transform: uppercase;
     }
 
@@ -64,19 +65,19 @@ export class ChordInput extends LitElement {
 
     input {
       flex: 1;
-      border: 1px solid #394a61;
+      border: 1px solid var(--border);
       border-radius: 12px;
       padding: 0.7rem 0.875rem;
       font: inherit;
       outline: none;
-      background: #0f1724;
-      color: #e2ebf9;
+      background: var(--bg-1);
+      color: var(--text);
       transition: all 150ms ease;
     }
 
     input:focus {
-      border-color: #2dd4bf;
-      box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.15);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow);
     }
 
     button {
@@ -85,32 +86,32 @@ export class ChordInput extends LitElement {
       padding: 0.7rem 1.5rem;
       font: inherit;
       font-weight: 700;
-      background: linear-gradient(180deg, #2dd4bf, #0f766e);
-      color: #f0fdfa;
+      background: var(--pad-active);
+      color: var(--text);
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(45, 212, 191, 0.2);
+      box-shadow: 0 4px 12px var(--accent-glow);
       transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     button:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(45, 212, 191, 0.35);
+      box-shadow: 0 6px 16px var(--accent-glow);
     }
 
     button:active:not(:disabled) {
       transform: translateY(1px);
-      box-shadow: 0 2px 4px rgba(45, 212, 191, 0.15);
+      box-shadow: 0 2px 4px var(--accent-glow);
     }
 
     button:disabled {
-      opacity: 0.5;
+      opacity: 0.4;
       cursor: not-allowed;
       box-shadow: none;
     }
 
     .hint {
       font-size: 0.78rem;
-      color: #64748b;
+      color: var(--muted);
       margin-top: 0.15rem;
       line-height: 1.35;
     }
@@ -118,8 +119,8 @@ export class ChordInput extends LitElement {
     .error {
       font-size: 0.78rem;
       color: #fda4af;
-      background: rgba(159, 18, 57, 0.4);
-      border: 1px solid #9f1239;
+      background: rgba(194, 70, 22, 0.15);
+      border: 1px solid var(--accent);
       border-radius: 8px;
       padding: 0.5rem 0.75rem;
       margin-top: 0.25rem;

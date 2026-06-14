@@ -48,24 +48,25 @@ class ChordMapperApp extends LitElement {
     }
 
     .panel {
-      border: 1px solid rgba(45, 212, 191, 0.15);
+      border: 1px solid var(--border);
       border-radius: 20px;
       padding: 1.25rem;
-      background: rgba(15, 23, 42, 0.75);
+      background: var(--surface);
       backdrop-filter: blur(12px);
       box-shadow:
-        inset 0 1px 0 rgb(255 255 255 / 0.03),
-        0 12px 36px rgb(2 6 23 / 0.45);
+        inset 0 1px 0 rgb(255 255 255 / 0.02),
+        0 12px 36px rgb(0 0 0 / 0.45);
     }
 
     .panel-title {
       margin: 0 0 1rem 0;
+      font-family: 'Space Grotesk', sans-serif;
       font-size: 0.85rem;
-      font-weight: 800;
+      font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #2dd4bf;
-      border-bottom: 1px solid rgba(45, 212, 191, 0.1);
+      color: var(--accent-2);
+      border-bottom: 1px solid var(--border);
       padding-bottom: 0.5rem;
     }
 
@@ -75,11 +76,11 @@ class ChordMapperApp extends LitElement {
     }
 
     .placeholder {
-      color: #94a3b8;
+      color: var(--muted);
       font-size: 0.9rem;
       text-align: center;
       padding: 2rem 1rem;
-      border: 1px dashed rgba(148, 163, 184, 0.25);
+      border: 1px dashed var(--border);
       border-radius: 12px;
       margin: 0.5rem 0;
     }
@@ -95,26 +96,28 @@ class ChordMapperApp extends LitElement {
     }
 
     .field label {
+      font-family: 'Space Grotesk', sans-serif;
       font-size: 0.8rem;
       font-weight: 700;
-      color: #c5d2e3;
-      letter-spacing: 0.02em;
+      color: var(--text);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
 
     .field select {
-      border: 1px solid #3a4a61;
+      border: 1px solid var(--border);
       border-radius: 10px;
       padding: 0.65rem 0.8rem;
       font: inherit;
-      background: #0f1724;
-      color: #dbe8f8;
+      background: var(--bg-1);
+      color: var(--text);
       outline: none;
       cursor: pointer;
       transition: border-color 150ms ease;
     }
 
     .field select:focus {
-      border-color: #2dd4bf;
+      border-color: var(--accent);
     }
 
     .toggle-row {
@@ -126,29 +129,29 @@ class ChordMapperApp extends LitElement {
     .toggle-row button {
       flex: 1;
       min-width: 100px;
-      border: 1px solid #3a4a61;
+      border: 1px solid var(--border);
       border-radius: 12px;
       padding: 0.6rem 0.8rem;
       font: inherit;
       font-weight: 700;
       font-size: 0.82rem;
-      background: #111b29;
-      color: #c4d3e7;
+      background: var(--bg-1);
+      color: var(--text);
       cursor: pointer;
       transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .toggle-row button:hover {
-      border-color: #2dd4bf;
-      color: #e4f7f3;
-      background: rgba(45, 212, 191, 0.05);
+      border-color: var(--accent);
+      color: var(--text);
+      background: rgba(242, 106, 54, 0.05);
     }
 
     .toggle-row button.active {
-      background: linear-gradient(180deg, #2dd4bf, #0f766e);
-      color: #f0fdfa;
-      border-color: #2dd4bf;
-      box-shadow: 0 4px 12px rgba(45, 212, 191, 0.25);
+      background: var(--pad-active);
+      color: var(--text);
+      border-color: var(--accent);
+      box-shadow: 0 4px 12px var(--accent-glow);
     }
 
     .switch-label {
@@ -160,17 +163,20 @@ class ChordMapperApp extends LitElement {
     }
 
     .switch-label span {
-      font-size: 0.82rem;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.8rem;
       font-weight: 700;
-      color: #c5d2e3;
+      color: var(--text);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
 
     .switch-input {
       appearance: none;
       width: 42px;
       height: 22px;
-      background: #111b29;
-      border: 1px solid #3a4a61;
+      background: var(--bg-1);
+      border: 1px solid var(--border);
       border-radius: 999px;
       position: relative;
       outline: none;
@@ -179,8 +185,8 @@ class ChordMapperApp extends LitElement {
     }
 
     .switch-input:checked {
-      background: #2dd4bf;
-      border-color: #2dd4bf;
+      background: var(--accent);
+      border-color: var(--accent);
     }
 
     .switch-input::before {
@@ -189,7 +195,7 @@ class ChordMapperApp extends LitElement {
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      background: #94a3b8;
+      background: var(--muted);
       top: 2px;
       left: 2px;
       transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1), background-color 150ms ease;
@@ -207,8 +213,8 @@ class ChordMapperApp extends LitElement {
     }
 
     .summary-card {
-      background: rgba(18, 28, 43, 0.6);
-      border: 1px solid rgba(49, 66, 88, 0.4);
+      background: rgba(24, 21, 19, 0.4);
+      border: 1px solid var(--border);
       border-radius: 12px;
       padding: 0.65rem;
       display: flex;
@@ -218,14 +224,14 @@ class ChordMapperApp extends LitElement {
     .summary-card strong {
       display: block;
       margin-bottom: 0.15rem;
-      color: #7dd3fc;
+      color: var(--muted);
       font-size: 0.72rem;
       letter-spacing: 0.02em;
       text-transform: uppercase;
     }
 
     .summary-card span {
-      color: #d2dfef;
+      color: var(--text);
       font-size: 0.95rem;
       font-weight: 700;
     }
@@ -233,15 +239,15 @@ class ChordMapperApp extends LitElement {
     .source {
       margin: 0;
       font-size: 0.78rem;
-      color: #64748b;
+      color: var(--muted);
       font-family: monospace;
       overflow-wrap: break-word;
     }
 
     .help-details {
       margin-top: 0.2rem;
-      background: rgba(30, 41, 59, 0.3);
-      border: 1px solid rgba(148, 163, 184, 0.12);
+      background: rgba(24, 21, 19, 0.3);
+      border: 1px solid var(--border);
       border-radius: 8px;
     }
 
@@ -249,7 +255,7 @@ class ChordMapperApp extends LitElement {
       padding: 0.35rem 0.5rem;
       font-size: 0.74rem;
       font-weight: 700;
-      color: #94a3b8;
+      color: var(--muted);
       cursor: pointer;
       user-select: none;
       outline: none;
@@ -259,17 +265,17 @@ class ChordMapperApp extends LitElement {
       padding: 0 0.5rem 0.5rem 0.5rem;
       margin: 0;
       font-size: 0.74rem;
-      color: #64748b;
+      color: var(--muted);
       line-height: 1.35;
     }
 
     .mode-note {
       margin: 0;
       font-size: 0.76rem;
-      color: #94a3b8;
+      color: var(--muted);
       line-height: 1.4;
-      background: rgba(18, 35, 53, 0.5);
-      border: 1px solid rgba(53, 80, 110, 0.3);
+      background: rgba(24, 21, 19, 0.5);
+      border: 1px solid var(--border);
       border-radius: 10px;
       padding: 0.6rem;
     }
@@ -279,8 +285,8 @@ class ChordMapperApp extends LitElement {
       font-size: 0.78rem;
       color: #fda4af;
       line-height: 1.4;
-      background: rgba(59, 13, 26, 0.6);
-      border: 1px solid #9f1239;
+      background: rgba(194, 70, 22, 0.15);
+      border: 1px solid var(--accent);
       border-radius: 10px;
       padding: 0.6rem 0.75rem;
     }
@@ -300,11 +306,11 @@ class ChordMapperApp extends LitElement {
     .chip {
       border-radius: 12px;
       padding: 0.4rem 0.75rem;
-      background: #1b283a;
-      color: #d3dfef;
+      background: var(--pad-dim);
+      color: var(--text);
       font-size: 0.85rem;
       font-weight: 700;
-      border: 1px solid #33465f;
+      border: 1px solid var(--border);
     }
 
     .play-button {
@@ -314,24 +320,24 @@ class ChordMapperApp extends LitElement {
       font: inherit;
       font-weight: 700;
       font-size: 0.84rem;
-      background: linear-gradient(180deg, #f59e0b, #b45309);
-      color: #fff7ed;
+      background: var(--pad-lit);
+      color: #1e1a17;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
-      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.28);
+      box-shadow: 0 4px 12px var(--accent-2-glow);
       transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .play-button:hover {
       transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+      box-shadow: 0 6px 16px var(--accent-2-glow);
     }
 
     .play-button:active {
       transform: translateY(1px);
-      box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+      box-shadow: 0 2px 4px var(--accent-2-glow);
     }
 
     .legend {
@@ -348,47 +354,47 @@ class ChordMapperApp extends LitElement {
       font-weight: 700;
       border: 1px solid transparent;
       box-shadow:
-        inset 0 1px 0 rgb(255 255 255 / 0.15),
-        0 1px 3px rgb(2 6 23 / 0.15);
+        inset 0 1px 0 rgb(255 255 255 / 0.05),
+        0 1px 3px rgb(0 0 0 / 0.15);
       letter-spacing: 0.01em;
     }
 
     .legend-root {
-      background: linear-gradient(180deg, #2dd4bf, #0f766e);
-      color: #f0fdfa;
-      border-color: rgb(45 212 191 / 0.45);
+      background: var(--pad-active);
+      color: var(--text);
+      border-color: var(--accent);
     }
 
     .legend-chord {
-      background: linear-gradient(180deg, #f59e0b, #b45309);
-      color: #fff7ed;
-      border-color: rgb(245 158 11 / 0.45);
+      background: var(--pad-lit);
+      color: #1e1a17;
+      border-color: var(--accent-2);
     }
 
     .legend-dim {
-      background: linear-gradient(180deg, #334155, #1f2937);
-      color: #cbd5e1;
-      border-color: rgb(148 163 184 / 0.35);
+      background: var(--pad-dim);
+      color: var(--muted);
+      border-color: var(--border);
     }
 
     .legend-target {
-      background: linear-gradient(180deg, #0f172a, #020617);
-      color: #f8fafc;
-      border-color: #38bdf8;
+      background: var(--bg-1);
+      color: var(--text);
+      border-color: var(--accent);
     }
 
     .legend-ring {
-      background: linear-gradient(180deg, #1f2937, #111827);
-      color: #f8fafc;
-      border-color: #94a3b8;
+      background: var(--pad-dim);
+      color: var(--text);
+      border-color: var(--pad-target);
     }
 
     .mobile-config-trigger {
       display: none;
-      border: 1px solid #3a4a61;
+      border: 1px solid var(--border);
       border-radius: 10px;
-      background: #0f1724;
-      color: #dbe8f8;
+      background: var(--bg-1);
+      color: var(--text);
       font: inherit;
       width: 40px;
       height: 36px;
@@ -402,12 +408,12 @@ class ChordMapperApp extends LitElement {
       align-items: center;
       justify-content: space-between;
       gap: 0.55rem;
-      border: 1px solid rgba(45, 212, 191, 0.15);
+      border: 1px solid var(--border);
       border-radius: 14px;
       padding: 0.75rem 1rem;
-      background: rgba(15, 23, 42, 0.85);
+      background: var(--surface);
       backdrop-filter: blur(12px);
-      box-shadow: 0 8px 20px rgb(2 6 23 / 0.35);
+      box-shadow: 0 8px 20px rgb(0 0 0 / 0.45);
     }
 
     .mobile-appbar-copy {
@@ -417,7 +423,8 @@ class ChordMapperApp extends LitElement {
 
     .mobile-appbar-title {
       margin: 0;
-      color: #2dd4bf;
+      color: var(--accent);
+      font-family: 'Space Grotesk', sans-serif;
       font-size: 0.95rem;
       font-weight: 800;
       letter-spacing: 0.04em;
@@ -426,7 +433,7 @@ class ChordMapperApp extends LitElement {
 
     .mobile-appbar-subtitle {
       margin: 0.15rem 0 0;
-      color: #94a3b8;
+      color: var(--muted);
       font-size: 0.72rem;
       line-height: 1.2;
     }
