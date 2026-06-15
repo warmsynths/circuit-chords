@@ -591,6 +591,10 @@ class ChordMapperApp extends LitElement {
   private autoPlay = true;
 
   @state()
+  /** Controls whether changing the project key transposes the progression. */
+  private transposeProgression = true;
+
+  @state()
   /** Active chord inversion level (0 = Root, 1 = 1st, 2 = 2nd, 3 = 3rd). */
   private inversion = 0;
 
@@ -605,7 +609,7 @@ class ChordMapperApp extends LitElement {
     const pads = buildCircuitGrid(activeChord, this.config);
     const recipe = buildChordRecipe(activeChord, pads, this.voicing, this.inversion);
     const missingChordTones = this.getMissingChordTones(activeChord, pads);
-    const showKeyProgression = this.originalKey !== this.config.key;
+    const showKeyProgression = this.transposeProgression && this.originalKey !== this.config.key;
 
     return html`
       <div class="mobile-appbar">
@@ -784,6 +788,22 @@ class ChordMapperApp extends LitElement {
       </div>
 
       <div class="field">
+        <label class="switch-label">
+          <span>Transpose Chords</span>
+          <input 
+            type="checkbox" 
+            class="switch-input" 
+            ?checked=${this.transposeProgression} 
+            @change=${this.onTransposeToggle} 
+          />
+        </label>
+        <details class="help-details">
+          <summary>What is this?</summary>
+          <p>When enabled, changing the Project Key transposes the chords to that key. Disable this if your chords are already written in the target key and you only want to align the pad layout.</p>
+        </details>
+      </div>
+
+      <div class="field">
         <label for=${`${idPrefix}-scale-select`}>Scale</label>
         <select id=${`${idPrefix}-scale-select`} .value=${this.config.scale} @change=${this.onScaleChange}>
           ${SCALE_OPTIONS.map((scale) => html`<option value=${scale}>${scale}</option>`)}
@@ -887,6 +907,14 @@ class ChordMapperApp extends LitElement {
   private onAutoPlayToggle(event: Event) {
     const target = event.target as HTMLInputElement;
     this.autoPlay = target.checked;
+  }
+
+  /**
+   * Handles toggle changes for transpose option.
+   */
+  private onTransposeToggle(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this.transposeProgression = target.checked;
   }
 
   /**
@@ -1017,6 +1045,10 @@ class ChordMapperApp extends LitElement {
   private getTransposedProgression(): ParsedChord[] {
     if (this.progression.length === 0) {
       return [];
+    }
+
+    if (!this.transposeProgression) {
+      return this.progression;
     }
 
     const semitones = this.getKeyShiftSemitones();
