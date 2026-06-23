@@ -11,115 +11,99 @@ export class CircuitGrid extends LitElement {
   static styles = css`
     :host {
       display: block;
+      height: 100%;
+      width: 100%;
     }
 
     .shell {
-      border-radius: 24px;
-      padding: 1rem;
-      background: var(--bg-1);
-      border: 1px solid var(--border);
-      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.02), 0 12px 36px rgb(0 0 0 / 0.45);
+      height: 100%;
     }
 
     .grid {
       display: grid;
       grid-template-columns: repeat(8, minmax(0, 1fr));
-      gap: 0.7rem;
+      grid-template-rows: repeat(4, 1fr);
+      gap: 12px;
+      height: 100%;
     }
 
     .gap {
-      aspect-ratio: 1;
-      border-radius: 16px;
+      border-radius: 8px;
       background: transparent;
-      border: none;
-      box-shadow: none;
       pointer-events: none;
     }
 
     .pad {
-      aspect-ratio: 1;
-      border-radius: 16px;
-      border: 1px solid var(--border);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
       display: grid;
       place-items: center;
       text-align: center;
       padding: 0.3rem;
-      color: var(--text);
+      color: #888;
       font-weight: 700;
       letter-spacing: 0.02em;
-      background: var(--bg-2);
-      box-shadow: inset 0 -8px 18px rgb(0 0 0 / 0.2);
-      transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1), 
-                  box-shadow 120ms cubic-bezier(0.4, 0, 0.2, 1), 
-                  background 120ms cubic-bezier(0.4, 0, 0.2, 1),
-                  border-color 120ms cubic-bezier(0.4, 0, 0.2, 1);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 100%), var(--pad-scale, #2c3a4e);
+      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05), 0 4px 8px rgba(0, 0, 0, 0.4);
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
       user-select: none;
       outline: none;
     }
 
     .pad:hover {
-      transform: translateY(-2px);
-      border-color: var(--accent);
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .pad:active {
-      transform: translateY(0) scale(0.96);
-      box-shadow: inset 0 4px 12px rgb(0 0 0 / 0.45);
+      transform: scale(0.94);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
     }
 
     .pad:focus-visible {
-      outline: 2px solid var(--accent);
+      outline: 2px solid var(--accent-magenta, #ff2a9f);
       outline-offset: 2px;
     }
 
     .pad.dim {
-      background: var(--pad-dim);
-      color: var(--muted);
-      opacity: 0.8;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0) 100%), var(--pad-chromatic, #222328);
+      color: #444;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
     }
 
+    .pad.scale {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 100%), var(--pad-scale, #2c3a4e);
+      color: #ccc;
+      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05), 0 4px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    /* "lit" corresponds to chord tones */
     .pad.lit {
-      background: var(--pad-lit);
-      box-shadow: 0 0 16px var(--accent-2-glow), inset 0 -8px 18px rgba(0,0,0,0.2);
-      color: #1e1a17;
-    }
-
-    .pad.lit:hover {
-      border-color: var(--accent-2);
-      box-shadow: 0 0 20px var(--accent-2-glow), inset 0 -8px 18px rgba(0,0,0,0.2);
-    }
-
-    .pad.active {
-      background: var(--pad-active);
-      box-shadow: 0 0 18px var(--accent-glow), inset 0 -8px 18px rgba(0,0,0,0.2);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%), var(--accent-magenta, #ff2a9f);
       color: white;
+      border-color: rgba(255, 255, 255, 0.25);
+      box-shadow: 0 0 20px rgba(255, 42, 159, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.3);
     }
 
-    .pad.active:hover {
-      border-color: var(--accent-hover);
-      box-shadow: 0 0 22px var(--accent-glow), inset 0 -8px 18px rgba(0,0,0,0.2);
+    /* "active" corresponds to the root note */
+    .pad.active {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0) 100%), var(--accent-cyan, #00f0ff);
+      color: #121316;
+      border-color: rgba(255, 255, 255, 0.3);
+      box-shadow: 0 0 18px rgba(0, 240, 255, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.4);
     }
 
     .meta {
       font-size: 0.68rem;
       opacity: 0.75;
+      display: none; /* Hide coords in new clean hardware design */
     }
 
+    /* "target" corresponds to voicing recipe targets */
     .pad.target {
-      outline: 2px solid var(--pad-target);
-      outline-offset: 1px;
-      box-shadow:
-        0 0 0 2px var(--accent),
-        0 0 16px var(--accent-glow),
-        inset 0 -8px 18px rgba(0,0,0,0.2);
-    }
-
-    .pad.target:hover {
-      box-shadow:
-        0 0 0 2px var(--accent-hover),
-        0 0 20px var(--accent-glow),
-        inset 0 -8px 18px rgba(0,0,0,0.2);
+      outline: 2px solid #ffffff;
+      outline-offset: 2px;
+      box-shadow: 0 0 12px #ffffff;
     }
 
     .step {
@@ -129,13 +113,13 @@ export class CircuitGrid extends LitElement {
       width: 18px;
       height: 18px;
       border-radius: 999px;
-      background: var(--pad-target);
-      color: var(--bg-1);
+      background: #ffffff;
+      color: #121316;
       font-size: 0.68rem;
       font-weight: 800;
       display: grid;
       place-items: center;
-      border: 1px solid var(--border);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
     .pad-inner {

@@ -41,66 +41,70 @@ export class ChordInput extends LitElement {
   static styles = css`
     :host {
       display: block;
-      color: var(--text);
+      color: #ffffff;
+      width: 100%;
     }
 
     .wrap {
       display: grid;
-      gap: 0.5rem;
+      gap: 12px;
+      width: 100%;
     }
 
     label {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 700;
-      color: var(--muted);
-      letter-spacing: 0.04em;
+      color: #888888;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
     }
 
     .input-group {
       display: flex;
-      gap: 0.5rem;
+      gap: 12px;
+      width: 100%;
     }
 
     input {
       flex: 1;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 0.7rem 0.875rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px 16px;
       font: inherit;
+      font-size: 0.95rem;
       outline: none;
-      background: var(--bg-1);
-      color: var(--text);
+      background: #121316;
+      color: #ffffff;
       transition: all 150ms ease;
     }
 
     input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px var(--accent-glow);
+      border-color: var(--accent-cyan, #00f0ff);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
     }
 
     button {
       border: none;
-      border-radius: 12px;
-      padding: 0.7rem 1.5rem;
+      border-radius: 8px;
+      padding: 12px 24px;
       font: inherit;
       font-weight: 700;
-      background: var(--pad-active);
-      color: var(--text);
+      background: var(--accent-magenta, #ff2a9f);
+      color: #ffffff;
       cursor: pointer;
-      box-shadow: 0 4px 12px var(--accent-glow);
+      box-shadow: 0 4px 12px rgba(255, 42, 159, 0.2);
       transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     button:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 6px 16px var(--accent-glow);
+      box-shadow: 0 6px 16px rgba(255, 42, 159, 0.3);
     }
 
     button:active:not(:disabled) {
       transform: translateY(1px);
-      box-shadow: 0 2px 4px var(--accent-glow);
+      box-shadow: 0 2px 4px rgba(255, 42, 159, 0.2);
     }
 
     button:disabled {
@@ -110,20 +114,20 @@ export class ChordInput extends LitElement {
     }
 
     .hint {
-      font-size: 0.78rem;
-      color: var(--muted);
-      margin-top: 0.15rem;
-      line-height: 1.35;
+      font-size: 0.75rem;
+      color: #666666;
+      margin-top: 2px;
+      line-height: 1.4;
     }
 
     .error {
       font-size: 0.78rem;
       color: #fda4af;
-      background: rgba(194, 70, 22, 0.15);
-      border: 1px solid var(--accent);
+      background: rgba(225, 29, 72, 0.1);
+      border: 1px solid #f43f5e;
       border-radius: 8px;
-      padding: 0.5rem 0.75rem;
-      margin-top: 0.25rem;
+      padding: 8px 12px;
+      margin-top: 4px;
     }
   `;
 

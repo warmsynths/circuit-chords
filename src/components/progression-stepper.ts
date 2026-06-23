@@ -14,59 +14,52 @@ export class ProgressionStepper extends LitElement {
   static styles = css`
     :host {
       display: block;
+      width: 100%;
     }
 
-    .stack {
-      display: grid;
-      gap: 0.65rem;
-    }
-
-    .row {
-      display: grid;
-      gap: 0.35rem;
-    }
-
-    .row-label {
-      margin: 0;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.74rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-
-    .wrap {
+    .sequence-track {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
+      width: 100%;
+      gap: 8px;
+      height: 48px;
     }
 
-    button {
-      border: 1px solid var(--border);
-      background: var(--pad-dim);
-      color: var(--text);
-      border-radius: 999px;
-      padding: 0.55rem 0.9rem;
-      font: inherit;
+    .step-block {
+      flex: 1;
+      background: var(--bg-onyx, #121316);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
       font-weight: 700;
+      color: #555;
       cursor: pointer;
-      transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1), 
-                  background 120ms cubic-bezier(0.4, 0, 0.2, 1), 
-                  border-color 120ms cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.15s;
+      overflow: hidden;
     }
 
-    button:hover {
-      transform: translateY(-1px);
-      border-color: var(--accent);
-      color: var(--text);
+    .step-block:hover {
+      background: var(--pad-chromatic, #222328);
+      color: #888;
     }
 
-    button.active {
-      background: var(--pad-active);
-      color: var(--text);
-      border-color: var(--accent);
-      box-shadow: 0 4px 12px var(--accent-glow);
+    .step-block.active {
+      border-color: var(--accent-magenta, #ff2a9f);
+      color: var(--accent-magenta, #ff2a9f);
+      background: rgba(255, 42, 159, 0.1);
+      box-shadow: 0 0 12px rgba(255, 42, 159, 0.2);
+    }
+
+    .step-index {
+      font-size: 0.6rem;
+      opacity: 0.5;
+    }
+
+    .chord-symbol {
+      font-size: 0.85rem;
     }
   `;
 
@@ -92,45 +85,24 @@ export class ProgressionStepper extends LitElement {
    * @returns Lit template for progression selector UI.
    */
   render() {
-    const hasKeyProgression = this.keyChords.length > 0;
-
+    const chords = this.keyChords.length > 0 ? this.keyChords : this.originalChords;
+    
     return html`
-      <div class="stack">
-        <div class="row">
-          <p class="row-label">Original</p>
-          <div class="wrap">
-            ${this.originalChords.map(
-              (chord, index) => html`
-                <button
-                  class=${index === this.activeIndex ? 'active' : ''}
-                  @click=${() => this.selectChord(index)}
-                >
-                  ${chord.symbol}
-                </button>
-              `
-            )}
-          </div>
-        </div>
-
-        ${hasKeyProgression
-          ? html`
-              <div class="row">
-                <p class="row-label">Key of ${this.keyLabel}</p>
-                <div class="wrap">
-                  ${this.keyChords.map(
-                    (chord, index) => html`
-                      <button
-                        class=${index === this.activeIndex ? 'active' : ''}
-                        @click=${() => this.selectChord(index)}
-                      >
-                        ${chord.symbol}
-                      </button>
-                    `
-                  )}
-                </div>
-              </div>
-            `
-          : null}
+      <div class="sequence-track">
+        ${Array.from({ length: 16 }).map((_, i) => {
+          const chord = chords[i];
+          return html`
+            <div 
+              class="step-block ${i === this.activeIndex ? 'active' : ''}"
+              @click=${() => chord && this.selectChord(i)}
+            >
+              ${chord 
+                ? html`<span class="chord-symbol">${chord.symbol}</span>`
+                : html`<span class="step-index">${i + 1}</span>`
+              }
+            </div>
+          `;
+        })}
       </div>
     `;
   }

@@ -5,7 +5,7 @@ import type { ParsedChord } from '../components/chord-input';
 /** Grid display mode for note assignment. */
 export type ScaleMode = 'collapsed' | 'chromatic';
 /** Visual state of pad according to chord/root membership. */
-export type PadState = 'dim' | 'lit' | 'active';
+export type PadState = 'dim' | 'lit' | 'active' | 'scale';
 /** Chord voicing strategy for selecting playable pad subset. */
 export type VoicingMode = 'triad' | 'seventh' | 'spread';
 /** Root anchor behavior for mapping pad notes. */
@@ -190,6 +190,8 @@ export function buildCircuitGrid(chord: ParsedChord | null, config: GridConfig):
       state = 'active';
     } else if (inChord) {
       state = 'lit';
+    } else if (inScale) {
+      state = 'scale';
     }
 
     return {
