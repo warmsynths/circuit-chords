@@ -129,6 +129,24 @@ export class CircuitGrid extends LitElement {
       display: grid;
       place-items: center;
     }
+
+    @media (max-width: 768px) {
+      .grid {
+        gap: 6px;
+      }
+      .pad {
+        padding: 0.15rem;
+        font-size: 0.75rem;
+        border-radius: 6px;
+      }
+      .step {
+        width: 14px;
+        height: 14px;
+        font-size: 0.55rem;
+        top: 3px;
+        right: 3px;
+      }
+    }
   `;
 
   @property({ attribute: false })

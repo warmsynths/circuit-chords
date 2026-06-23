@@ -363,6 +363,97 @@ export class CircuitChordForge extends LitElement {
     progression-stepper {
       width: 100%;
     }
+
+    /* Responsive Media Queries */
+    @media (max-width: 768px) {
+      :host {
+        --sidebar-left-width: 56px;
+        --sidebar-right-width: 0px;
+        --header-height: 70px;
+        --footer-height: 70px;
+        --gap: 8px;
+        padding: var(--gap);
+      }
+
+      .app-grid {
+        grid-template-columns: var(--sidebar-left-width) 1fr;
+        grid-template-rows: var(--header-height) 1fr var(--footer-height);
+        gap: var(--gap);
+        height: calc(100vh - (var(--gap) * 2));
+      }
+
+      .desktop-only {
+        display: none !important;
+      }
+
+      .mobile-only {
+        display: flex !important;
+      }
+
+      .main-content {
+        padding: 12px;
+      }
+
+      /* Sidebar Right as Overlay Drawer on Mobile */
+      .sidebar-right {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 260px;
+        height: 100vh;
+        z-index: 1000;
+        grid-column: auto;
+        grid-row: auto;
+        background: var(--bg-charcoal);
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0;
+        box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .sidebar-right.open {
+        transform: translateX(0);
+      }
+
+      .sidebar-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(2px);
+        z-index: 999;
+        display: none;
+      }
+
+      .sidebar-backdrop.open {
+        display: block;
+      }
+
+      /* Reduce spacer elements in timeline footer on mobile */
+      .footer-timeline {
+        padding: 0 8px;
+      }
+    }
+
+    @media (min-width: 769px) {
+      .desktop-only {
+        display: flex !important;
+      }
+
+      .mobile-only {
+        display: none !important;
+      }
+      
+      .sidebar-backdrop {
+        display: none !important;
+      }
+    }
   `;
 
   // === State Variables ===
@@ -381,6 +472,7 @@ export class CircuitChordForge extends LitElement {
   @state() private transposeProgression = true;
   @state() private inversion = 0;
   @state() private source = '';
+  @state() private showSettings = false;
 
   render() {
     const transposedProgression = this.getTransposedProgression();
@@ -403,7 +495,7 @@ export class CircuitChordForge extends LitElement {
             <button class="nav-btn" title="Help ?">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
             </button>
-            <button class="nav-btn" title="Settings">
+            <button class="nav-btn" title="Settings" @click=${() => this.showSettings = !this.showSettings}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             </button>
           </div>
@@ -413,7 +505,8 @@ export class CircuitChordForge extends LitElement {
         <header class="panel header-top">
           <div class="config-group">
             <span class="config-label">Root Note</span>
-            <div class="tactile-group">
+            <!-- Desktop Layout -->
+            <div class="tactile-group desktop-only">
               ${KEY_OPTIONS.map(key => html`
                 <button 
                   class="tactile-btn ${this.config.key === key ? 'active-root' : ''}"
@@ -421,6 +514,14 @@ export class CircuitChordForge extends LitElement {
                   ${key}
                 </button>
               `)}
+            </div>
+            <!-- Mobile Layout -->
+            <div class="tactile-group mobile-only">
+              <select class="header-select" @change=${(e: Event) => this.onKeyChange((e.target as HTMLSelectElement).value)}>
+                ${KEY_OPTIONS.map(key => html`
+                  <option value=${key} ?selected=${this.config.key === key}>${key}</option>
+                `)}
+              </select>
             </div>
           </div>
           
@@ -451,8 +552,11 @@ export class CircuitChordForge extends LitElement {
           </div>
         </main>
 
+        <!-- Sidebar Backdrop for Mobile overlay -->
+        <div class="sidebar-backdrop ${this.showSettings ? 'open' : ''}" @click=${() => this.showSettings = false}></div>
+
         <!-- 4. Right Sidebar (MIDI HUD) -->
-        <aside class="panel sidebar-right">
+        <aside class="panel sidebar-right ${this.showSettings ? 'open' : ''}">
           <div class="midi-status">
             <span class="config-label">MIDI Status</span>
             <div class="midi-icon-wrapper connected">

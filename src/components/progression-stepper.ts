@@ -61,6 +61,26 @@ export class ProgressionStepper extends LitElement {
     .chord-symbol {
       font-size: 0.85rem;
     }
+
+    @media (max-width: 768px) {
+      .sequence-track {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: 2px;
+      }
+      .sequence-track::-webkit-scrollbar {
+        display: none;
+      }
+      .step-block {
+        flex: 0 0 46px;
+        min-width: 46px;
+        height: 38px;
+      }
+      .chord-symbol {
+        font-size: 0.75rem;
+      }
+    }
   `;
 
   @property({ attribute: false })
