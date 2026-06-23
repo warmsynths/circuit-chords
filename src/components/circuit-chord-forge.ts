@@ -76,7 +76,7 @@ export class CircuitChordForge extends LitElement {
     .app-grid {
       display: grid;
       grid-template-columns: var(--sidebar-left-width) 1fr var(--sidebar-right-width);
-      grid-template-rows: var(--header-height) 1fr var(--footer-height);
+      grid-template-rows: 48px var(--header-height) 1fr var(--footer-height);
       gap: var(--gap);
       height: calc(100vh - (var(--gap) * 2));
       max-width: 1600px;
@@ -90,10 +90,72 @@ export class CircuitChordForge extends LitElement {
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
     }
 
+    /* Brand Header Bar */
+    .brand-header {
+      grid-column: 1 / 4;
+      grid-row: 1 / 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 48px;
+      padding: 0 16px;
+      background: var(--bg-charcoal);
+      border-radius: var(--radius-panel);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .brand-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .brand-title {
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      text-transform: lowercase;
+      color: #ffffff;
+      line-height: 1;
+    }
+
+    .brand-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .midi-led-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #888;
+    }
+
+    .midi-led {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--status-green);
+      box-shadow: 0 0 8px var(--status-green);
+    }
+
     /* Section 1: Left Navigation Tab Bar */
     .sidebar-left {
       grid-column: 1 / 2;
-      grid-row: 1 / 4;
+      grid-row: 2 / 5;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -139,7 +201,7 @@ export class CircuitChordForge extends LitElement {
     /* Section 2: Top Header Bar */
     .header-top {
       grid-column: 2 / 3;
-      grid-row: 1 / 2;
+      grid-row: 2 / 3;
       display: flex;
       align-items: center;
       padding: 0 24px;
@@ -223,7 +285,7 @@ export class CircuitChordForge extends LitElement {
     /* Section 3: Center Main Content Area */
     .main-content {
       grid-column: 2 / 3;
-      grid-row: 2 / 3;
+      grid-row: 3 / 4;
       padding: 24px;
       display: flex;
       flex-direction: column;
@@ -256,7 +318,7 @@ export class CircuitChordForge extends LitElement {
     /* Section 4: Right Sidebar (MIDI HUD) */
     .sidebar-right {
       grid-column: 3 / 4;
-      grid-row: 1 / 3;
+      grid-row: 2 / 4;
       padding: 24px 20px;
       display: flex;
       flex-direction: column;
@@ -354,7 +416,7 @@ export class CircuitChordForge extends LitElement {
     /* Section 5: Bottom Timeline Footer */
     .footer-timeline {
       grid-column: 2 / 4;
-      grid-row: 3 / 4;
+      grid-row: 4 / 5;
       display: flex;
       align-items: center;
       padding: 0 24px;
@@ -377,9 +439,15 @@ export class CircuitChordForge extends LitElement {
 
       .app-grid {
         grid-template-columns: var(--sidebar-left-width) 1fr;
-        grid-template-rows: var(--header-height) 1fr var(--footer-height);
+        grid-template-rows: 48px var(--header-height) 1fr var(--footer-height);
         gap: var(--gap);
         height: calc(100vh - (var(--gap) * 2));
+      }
+
+      .brand-header {
+        grid-column: 1 / 3;
+        grid-row: 1 / 2;
+        padding: 0 12px;
       }
 
       .desktop-only {
@@ -438,6 +506,8 @@ export class CircuitChordForge extends LitElement {
       /* Reduce spacer elements in timeline footer on mobile */
       .footer-timeline {
         padding: 0 8px;
+        grid-column: 2 / 3;
+        grid-row: 4 / 5;
       }
     }
 
@@ -482,6 +552,26 @@ export class CircuitChordForge extends LitElement {
 
     return html`
       <div class="app-grid">
+        <!-- Brand Header Bar -->
+        <header class="brand-header">
+          <div class="brand-left">
+            <svg class="brand-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="32" height="32" rx="6" fill="#ffffff" />
+              <g transform="rotate(-45 16 16)" fill="#1a1b20">
+                <rect x="8.5" y="4.5" width="6" height="23" rx="2.5" />
+                <rect x="17.5" y="13.5" width="6" height="14" rx="2.5" />
+              </g>
+            </svg>
+            <div class="brand-title">circuit chords</div>
+          </div>
+          <div class="brand-right">
+            <div class="midi-led-group">
+              <span class="midi-led"></span>
+              WebMIDI
+            </div>
+          </div>
+        </header>
+
         <!-- 1. Left Navigation Tab Bar -->
         <nav class="panel sidebar-left">
           <button class="nav-btn ${this.activeTab === 'grid' ? 'active' : ''}" title="Grid View" @click=${() => this.activeTab = 'grid'}>
