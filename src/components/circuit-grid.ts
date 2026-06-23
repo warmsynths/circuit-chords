@@ -147,6 +147,13 @@ export class CircuitGrid extends LitElement {
         right: 3px;
       }
     }
+
+    @media (max-width: 768px) and (orientation: portrait) {
+      .grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-rows: repeat(8, 1fr);
+      }
+    }
   `;
 
   @property({ attribute: false })

@@ -75,7 +75,7 @@ export class CircuitChordForge extends LitElement {
     /* 2. STRUCTURAL SECTIONS & ARCHITECTURE */
     .app-grid {
       display: grid;
-      grid-template-columns: var(--sidebar-left-width) 1fr var(--sidebar-right-width);
+      grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr) var(--sidebar-right-width);
       grid-template-rows: 48px var(--header-height) 1fr var(--footer-height);
       gap: var(--gap);
       height: calc(100vh - (var(--gap) * 2));
@@ -438,7 +438,7 @@ export class CircuitChordForge extends LitElement {
       }
 
       .app-grid {
-        grid-template-columns: var(--sidebar-left-width) 1fr;
+        grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
         grid-template-rows: 48px var(--header-height) 1fr var(--footer-height);
         gap: var(--gap);
         height: calc(100vh - (var(--gap) * 2));
