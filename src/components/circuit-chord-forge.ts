@@ -76,7 +76,7 @@ export class CircuitChordForge extends LitElement {
     /* 2. STRUCTURAL SECTIONS & ARCHITECTURE */
     .app-grid {
       display: grid;
-      grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr) var(--sidebar-right-width);
+      grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
       grid-template-rows: 48px var(--header-height) 1fr var(--footer-height);
       gap: var(--gap);
       height: calc(100vh - (var(--gap) * 2));
@@ -93,7 +93,7 @@ export class CircuitChordForge extends LitElement {
 
     /* Brand Header Bar */
     .brand-header {
-      grid-column: 1 / 4;
+      grid-column: 1 / -1;
       grid-row: 1 / 2;
       display: flex;
       align-items: center;
@@ -149,6 +149,11 @@ export class CircuitChordForge extends LitElement {
       width: 8px;
       height: 8px;
       border-radius: 50%;
+      background: #444;
+      transition: all 0.3s ease;
+    }
+
+    .midi-led.connected {
       background: var(--status-green);
       box-shadow: 0 0 8px var(--status-green);
     }
@@ -316,11 +321,25 @@ export class CircuitChordForge extends LitElement {
       max-width: 500px;
     }
 
-    /* Section 4: Right Sidebar (MIDI HUD) */
+    /* Section 4: Right Sidebar (MIDI HUD / Modal on Desktop) */
     .sidebar-right {
-      grid-column: 3 / 4;
-      grid-row: 2 / 4;
-      padding: 24px 20px;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -55%) scale(0.95);
+      width: 400px;
+      max-width: 90vw;
+      height: auto;
+      max-height: 85vh;
+      z-index: 1000;
+      background: rgba(26, 27, 32, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.8),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      padding: 32px 28px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -328,6 +347,15 @@ export class CircuitChordForge extends LitElement {
       overflow-y: auto;
       -ms-overflow-style: none;
       scrollbar-width: none;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .sidebar-right.open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, -50%) scale(1);
     }
     .sidebar-right::-webkit-scrollbar {
       display: none;
@@ -377,6 +405,11 @@ export class CircuitChordForge extends LitElement {
       font-size: 0.75rem;
       font-weight: 800;
       letter-spacing: 0.15em;
+      color: #666;
+      transition: all 0.3s ease;
+    }
+
+    .status-text.connected {
       color: var(--status-green);
       text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
     }
@@ -414,9 +447,83 @@ export class CircuitChordForge extends LitElement {
       border-color: rgba(255, 255, 255, 0.2);
     }
 
+    .settings-section {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding-top: 8px;
+    }
+
+    .section-title {
+      margin: 0 0 4px 0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-cyan);
+      opacity: 0.8;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 6px;
+    }
+
+    .midi-devices-list {
+      margin-top: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .devices-ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .devices-ul li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-onyx);
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .device-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--status-green);
+      box-shadow: 0 0 6px var(--status-green);
+    }
+
+    .device-name {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #ddd;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .no-devices-msg {
+      font-size: 0.75rem;
+      color: #666;
+      font-style: italic;
+      text-align: center;
+      padding: 12px;
+      background: var(--bg-onyx);
+      border-radius: 8px;
+      border: 1px dashed rgba(255, 255, 255, 0.05);
+    }
+
     /* Section 5: Bottom Timeline Footer */
     .footer-timeline {
-      grid-column: 2 / 4;
+      grid-column: 2 / -1;
       grid-row: 4 / 5;
       display: flex;
       align-items: center;
@@ -427,8 +534,48 @@ export class CircuitChordForge extends LitElement {
       width: 100%;
     }
 
-    .mobile-close-btn {
-      display: none;
+    /* Close Button (Global for Modal and Drawer) */
+    .close-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      color: #888;
+      cursor: pointer;
+      z-index: 1010;
+      transition: all 0.2s ease;
+    }
+    .close-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    /* Backdrop (Global overlay for modal/drawer) */
+    .sidebar-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .sidebar-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
     }
 
     .scale-warning {
@@ -484,68 +631,31 @@ export class CircuitChordForge extends LitElement {
       .sidebar-right {
         position: fixed;
         top: 0;
+        left: auto;
         right: 0;
         bottom: 0;
         width: 280px;
         height: 100vh;
+        max-height: 100vh;
         z-index: 1000;
-        grid-column: 1 / -1;
-        grid-row: 1 / -1;
         background: var(--bg-charcoal);
         border-left: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: none;
+        border-right: none;
+        border-bottom: none;
         border-radius: 0;
         box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
         transform: translateX(100%);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        padding: 24px 20px;
+        opacity: 1 !important;
+        pointer-events: none;
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        flex-direction: column;
       }
 
       .sidebar-right.open {
         transform: translateX(0);
-      }
-
-      .mobile-close-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        width: 32px;
-        height: 32px;
-        color: #888;
-        cursor: pointer;
-        z-index: 1010;
-        transition: all 0.2s ease;
-      }
-      .mobile-close-btn:hover {
-        background: rgba(255, 255, 255, 0.15);
-        border-color: var(--accent-cyan);
-        color: var(--accent-cyan);
-      }
-
-      .sidebar-backdrop {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(2px);
-        z-index: 999;
-        grid-column: 1 / -1;
-        grid-row: 1 / -1;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-      }
-
-      .sidebar-backdrop.open {
-        opacity: 1;
         pointer-events: auto;
       }
 
@@ -563,10 +673,6 @@ export class CircuitChordForge extends LitElement {
       }
 
       .mobile-only {
-        display: none !important;
-      }
-      
-      .sidebar-backdrop {
         display: none !important;
       }
     }
@@ -589,10 +695,59 @@ export class CircuitChordForge extends LitElement {
   @state() private inversion = 0;
   @state() private source = '';
   @state() private showSettings = false;
+  @state() private midiConnected = false;
+  @state() private midiDevices: string[] = [];
 
   connectedCallback() {
     super.connectedCallback();
     this.loadDefaultProgression();
+    this.initMidi();
+  }
+
+  private initMidi() {
+    if (typeof navigator !== 'undefined' && 'requestMIDIAccess' in navigator) {
+      (navigator as any).requestMIDIAccess()
+        .then((access: any) => {
+          this.updateMidiStatus(access);
+          access.onstatechange = () => {
+            this.updateMidiStatus(access);
+          };
+        })
+        .catch((err: any) => {
+          console.warn("MIDI access request failed:", err);
+          this.midiConnected = false;
+          this.midiDevices = [];
+        });
+    }
+  }
+
+  private updateMidiStatus(access: any) {
+    let hasDevice = false;
+    const devices: string[] = [];
+    
+    if (access && access.inputs) {
+      access.inputs.forEach((input: any) => {
+        if (input.state === 'connected') {
+          hasDevice = true;
+          if (input.name && !devices.includes(input.name)) {
+            devices.push(input.name);
+          }
+        }
+      });
+    }
+    if (access && access.outputs) {
+      access.outputs.forEach((output: any) => {
+        if (output.state === 'connected') {
+          hasDevice = true;
+          if (output.name && !devices.includes(output.name)) {
+            devices.push(output.name);
+          }
+        }
+      });
+    }
+    
+    this.midiConnected = hasDevice;
+    this.midiDevices = devices;
   }
 
   private loadDefaultProgression() {
@@ -653,7 +808,7 @@ export class CircuitChordForge extends LitElement {
           </div>
           <div class="brand-right">
             <div class="midi-led-group">
-              <span class="midi-led"></span>
+              <span class="midi-led ${this.midiConnected ? 'connected' : ''}"></span>
               WebMIDI
             </div>
           </div>
@@ -672,7 +827,7 @@ export class CircuitChordForge extends LitElement {
             <button class="nav-btn" title="Help ?">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
             </button>
-            <button class="nav-btn" title="Settings" @click=${() => this.showSettings = !this.showSettings}>
+            <button class="nav-btn ${this.showSettings ? 'active' : ''}" title="Settings" @click=${() => this.showSettings = !this.showSettings}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             </button>
           </div>
@@ -743,55 +898,88 @@ export class CircuitChordForge extends LitElement {
         <!-- Sidebar Backdrop for Mobile overlay -->
         <div class="sidebar-backdrop ${this.showSettings ? 'open' : ''}" @click=${() => this.showSettings = false}></div>
 
-        <!-- 4. Right Sidebar (MIDI HUD) -->
+        <!-- 4. Right Sidebar (MIDI HUD / Modal on Desktop) -->
         <aside class="panel sidebar-right ${this.showSettings ? 'open' : ''}">
-          <!-- Mobile Close Button -->
-          <button class="mobile-close-btn" @click=${() => this.showSettings = false} title="Close Settings">
+          <!-- Close Button -->
+          <button class="close-btn" @click=${() => this.showSettings = false} title="Close Settings">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
 
-          <div class="midi-status">
-            <span class="config-label">MIDI Status</span>
-            <div class="midi-icon-wrapper connected">
-              <svg class="midi-svg" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke-width="4" />
-                <circle cx="25" cy="70" r="6" fill="currentColor" />
-                <circle cx="75" cy="70" r="6" fill="currentColor" />
-                <circle cx="20" cy="40" r="6" fill="currentColor" />
-                <circle cx="80" cy="40" r="6" fill="currentColor" />
-                <circle cx="50" cy="20" r="6" fill="currentColor" />
-                <path d="M 45 90 L 50 80 L 55 90 Z" fill="currentColor" stroke="none" />
-              </svg>
+          <!-- Sidebar Header -->
+          <div class="sidebar-header" style="width: 100%; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 12px; margin-bottom: 8px;">
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #ffffff; letter-spacing: -0.02em;">Settings</h3>
+          </div>
+
+          <!-- Section 1: Project Settings -->
+          <div class="settings-section">
+            <h4 class="section-title">Project Settings</h4>
+            
+            <div class="midi-config">
+              <span class="config-label">Pad Anchor</span>
+              <select class="midi-select" .value=${this.config.anchorMode} @change=${(e: Event) => this.setAnchorMode((e.target as HTMLSelectElement).value as PadAnchorMode)}>
+                ${PAD_ANCHOR_OPTIONS.map((o) => html`<option value=${o}>${o === 'key' ? 'Project Key' : 'Chord Root'}</option>`)}
+              </select>
             </div>
-            <div class="status-text">CONNECTED</div>
+            
+            <div class="midi-config">
+              <span class="config-label">Pad Mode</span>
+              <select class="midi-select" .value=${this.config.mode} @change=${(e: Event) => this.setMode((e.target as HTMLSelectElement).value as ScaleMode)}>
+                <option value="chromatic">Chromatic</option>
+                <option value="collapsed">Scale Collapse</option>
+              </select>
+            </div>
+            
+            <div class="midi-config">
+              <span class="config-label">Voicing</span>
+              <select class="midi-select" .value=${this.voicing} @change=${(e: Event) => this.onVoicingChange((e.target as HTMLSelectElement).value as VoicingMode)}>
+                ${VOICING_OPTIONS.map((v) => html`<option value=${v}>${v}</option>`)}
+              </select>
+            </div>
           </div>
 
-          <!-- Advanced Config -->
-          <div class="midi-config">
-            <span class="config-label">Pad Anchor</span>
-            <select class="midi-select" .value=${this.config.anchorMode} @change=${(e: Event) => this.setAnchorMode((e.target as HTMLSelectElement).value as PadAnchorMode)}>
-              ${PAD_ANCHOR_OPTIONS.map((o) => html`<option value=${o}>${o === 'key' ? 'Project Key' : 'Chord Root'}</option>`)}
-            </select>
-          </div>
-          
-          <div class="midi-config">
-            <span class="config-label">Pad Mode</span>
-            <select class="midi-select" .value=${this.config.mode} @change=${(e: Event) => this.setMode((e.target as HTMLSelectElement).value as ScaleMode)}>
-              <option value="chromatic">Chromatic</option>
-              <option value="collapsed">Scale Collapse</option>
-            </select>
-          </div>
-          
-          <div class="midi-config">
-            <span class="config-label">Voicing</span>
-            <select class="midi-select" .value=${this.voicing} @change=${(e: Event) => this.onVoicingChange((e.target as HTMLSelectElement).value as VoicingMode)}>
-              ${VOICING_OPTIONS.map((v) => html`<option value=${v}>${v}</option>`)}
-            </select>
-          </div>
+          <!-- Section 2: MIDI Settings -->
+          <div class="settings-section">
+            <h4 class="section-title">MIDI Settings</h4>
+            
+            <div class="midi-status">
+              <div class="midi-icon-wrapper ${this.midiConnected ? 'connected' : ''}">
+                <svg class="midi-svg" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" stroke-width="4" />
+                  <circle cx="25" cy="70" r="6" fill="currentColor" />
+                  <circle cx="75" cy="70" r="6" fill="currentColor" />
+                  <circle cx="20" cy="40" r="6" fill="currentColor" />
+                  <circle cx="80" cy="40" r="6" fill="currentColor" />
+                  <circle cx="50" cy="20" r="6" fill="currentColor" />
+                  <path d="M 45 90 L 50 80 L 55 90 Z" fill="currentColor" stroke="none" />
+                </svg>
+              </div>
+              <div class="status-text ${this.midiConnected ? 'connected' : 'disconnected'}">
+                ${this.midiConnected ? 'CONNECTED' : 'DISCONNECTED'}
+              </div>
+            </div>
 
+            <!-- Dynamic list of connected MIDI devices -->
+            ${this.midiConnected ? html`
+              <div class="midi-devices-list">
+                <span class="config-label">Connected Devices</span>
+                <ul class="devices-ul">
+                  ${this.midiDevices.map(device => html`
+                    <li>
+                      <span class="device-dot"></span>
+                      <span class="device-name" title="${device}">${device}</span>
+                    </li>
+                  `)}
+                </ul>
+              </div>
+            ` : html`
+              <div class="no-devices-msg">
+                No external MIDI devices connected
+              </div>
+            `}
+          </div>
         </aside>
 
         <!-- 5. Bottom Timeline Footer -->
