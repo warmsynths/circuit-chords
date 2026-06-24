@@ -363,6 +363,101 @@ export class CircuitChordForge extends LitElement {
       display: none;
     }
 
+    /* Help Panel (Modal on Desktop) */
+    .sidebar-help {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -55%) scale(0.95);
+      width: 480px;
+      max-width: 90vw;
+      height: auto;
+      max-height: 85vh;
+      z-index: 1000;
+      background: rgba(26, 27, 32, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.8),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 20px;
+      overflow-y: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .sidebar-help.open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .sidebar-help::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Help specific contents formatting */
+    .help-section {
+      width: 100%;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 16px;
+    }
+    .help-section:last-of-type {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .help-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-cyan);
+      margin: 0 0 10px 0;
+    }
+    .help-text {
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: #ccc;
+      margin: 0;
+    }
+    .help-list {
+      margin: 8px 0 0 0;
+      padding-left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      list-style-type: none;
+    }
+    .help-list li {
+      font-size: 0.8rem;
+      line-height: 1.4;
+      color: #bbb;
+      position: relative;
+    }
+    .help-list li strong {
+      color: #fff;
+    }
+    .help-step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent-magenta);
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 800;
+      margin-right: 6px;
+    }
+
     .midi-status {
       display: flex;
       flex-direction: column;
@@ -673,6 +768,44 @@ export class CircuitChordForge extends LitElement {
         pointer-events: auto;
       }
 
+      /* Sidebar Help as Overlay Drawer on Mobile */
+      .sidebar-help {
+        position: fixed;
+        top: 0;
+        left: auto;
+        right: 0;
+        bottom: 0;
+        width: 300px;
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        z-index: 1000;
+        background: var(--bg-charcoal);
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: none;
+        border-right: none;
+        border-bottom: none;
+        border-radius: 0;
+        box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+        transform: translateX(100%);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        padding: 24px 20px;
+        opacity: 1 !important;
+        pointer-events: none;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+
+      .sidebar-help.open {
+        transform: translateX(0);
+        pointer-events: auto;
+      }
+
       /* Reduce spacer elements in timeline footer on mobile */
       .footer-timeline {
         padding: 0 8px;
@@ -709,8 +842,23 @@ export class CircuitChordForge extends LitElement {
   @state() private inversion = 0;
   @state() private source = '';
   @state() private showSettings = false;
+  @state() private showHelp = false;
   @state() private midiConnected = false;
   @state() private midiDevices: string[] = [];
+
+  private toggleHelp() {
+    this.showHelp = !this.showHelp;
+    if (this.showHelp) {
+      this.showSettings = false;
+    }
+  }
+
+  private toggleSettings() {
+    this.showSettings = !this.showSettings;
+    if (this.showSettings) {
+      this.showHelp = false;
+    }
+  }
 
   connectedCallback() {
     super.connectedCallback();
@@ -838,10 +986,10 @@ export class CircuitChordForge extends LitElement {
           </button>
           <div class="nav-divider"></div>
           <div class="nav-bottom">
-            <button class="nav-btn" title="Help ?">
+            <button class="nav-btn ${this.showHelp ? 'active' : ''}" title="Help ?" @click=${() => this.toggleHelp()}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
             </button>
-            <button class="nav-btn ${this.showSettings ? 'active' : ''}" title="Settings" @click=${() => this.showSettings = !this.showSettings}>
+            <button class="nav-btn ${this.showSettings ? 'active' : ''}" title="Settings" @click=${() => this.toggleSettings()}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             </button>
           </div>
@@ -910,7 +1058,7 @@ export class CircuitChordForge extends LitElement {
         </main>
 
         <!-- Sidebar Backdrop for Mobile overlay -->
-        <div class="sidebar-backdrop ${this.showSettings ? 'open' : ''}" @click=${() => this.showSettings = false}></div>
+        <div class="sidebar-backdrop ${this.showSettings || this.showHelp ? 'open' : ''}" @click=${() => { this.showSettings = false; this.showHelp = false; }}></div>
 
         <!-- 4. Right Sidebar (MIDI HUD / Modal on Desktop) -->
         <aside class="panel sidebar-right ${this.showSettings ? 'open' : ''}">
@@ -993,6 +1141,62 @@ export class CircuitChordForge extends LitElement {
                 No external MIDI devices connected
               </div>
             `}
+          </div>
+        </aside>
+
+        <!-- Help Sidebar/Modal Panel -->
+        <aside class="panel sidebar-help ${this.showHelp ? 'open' : ''}">
+          <!-- Close Button -->
+          <button class="close-btn" @click=${() => this.showHelp = false} title="Close Help">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+
+          <!-- Sidebar Header -->
+          <div class="sidebar-header" style="width: 100%; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 12px; margin-bottom: 8px;">
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #ffffff; letter-spacing: -0.02em;">Quick Start Guide</h3>
+          </div>
+
+          <!-- Section 1: Entering Chords -->
+          <div class="help-section">
+            <h4 class="help-title">1. Enter Progressions</h4>
+            <p class="help-text">
+              Go to the <strong>Data Input View</strong> (second icon from the top in the left menu) to write or paste your chord progression (e.g. <code style="color: var(--accent-cyan); background: var(--bg-onyx); padding: 2px 6px; border-radius: 4px; font-family: monospace;">Am7 D9 Gmaj7</code>).
+            </p>
+          </div>
+
+          <!-- Section 2: Playing Mapped Pads -->
+          <div class="help-section">
+            <h4 class="help-title">2. View & Play Pads</h4>
+            <p class="help-text">
+              Switch back to the <strong>Grid View</strong> (top icon in the left menu) to see the 4x8 Circuit pad grid. 
+            </p>
+            <ul class="help-list">
+              <li><span class="help-step-number">1</span><strong>Target Voicings</strong>: Pads with white border rings show the notes to press to play the active chord. The numbers indicate the recommended finger/voicing order.</li>
+              <li><strong>Interactive Preview</strong>: Click or tap any pad to play its note individually.</li>
+            </ul>
+          </div>
+
+          <!-- Section 3: Customizing Layouts -->
+          <div class="help-section">
+            <h4 class="help-title">3. Configure Layouts</h4>
+            <p class="help-text">
+              Open the <strong>Settings Panel</strong> (gear icon in the left menu) to configure:
+            </p>
+            <ul class="help-list">
+              <li><strong>Pad Mode</strong>: <em>Scale Collapse</em> hides non-scale notes to maximize grid efficiency, while <em>Chromatic</em> keeps all 12 notes visible.</li>
+              <li><strong>Voicing Types</strong>: Choose between Triad, Seventh, or Spread configurations.</li>
+            </ul>
+          </div>
+
+          <!-- Section 4: WebMIDI Connect -->
+          <div class="help-section">
+            <h4 class="help-title">4. Hardware Integration</h4>
+            <p class="help-text">
+              Connect external MIDI controllers or synth modules. The <strong>WebMIDI LED indicator</strong> in the top header will light up green once a valid device is successfully established.
+            </p>
           </div>
         </aside>
 
