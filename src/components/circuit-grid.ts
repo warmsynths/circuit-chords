@@ -17,23 +17,51 @@ export class CircuitGrid extends LitElement {
 
     .shell {
       height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(8, minmax(0, 1fr));
-      grid-template-rows: repeat(4, 1fr);
+      grid-template-columns: 24px repeat(8, minmax(0, 1fr));
+      grid-template-rows: 24px repeat(4, 1fr);
       gap: 12px;
-      height: 100%;
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .grid-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #555;
+      user-select: none;
+      font-family: inherit;
+    }
+
+    .col-label {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 4px;
+    }
+
+    .row-label {
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      padding-right: 8px;
     }
 
     .gap {
       border-radius: 8px;
       background: transparent;
       pointer-events: none;
+      aspect-ratio: 1;
     }
 
     .pad {
+      aspect-ratio: 1;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.05);
       display: grid;
@@ -130,13 +158,21 @@ export class CircuitGrid extends LitElement {
       place-items: center;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
       .grid {
+        grid-template-columns: 16px repeat(8, minmax(0, 1fr));
+        grid-template-rows: 16px repeat(4, 1fr);
         gap: 6px;
+      }
+      .grid-label {
+        font-size: 0.55rem;
+      }
+      .row-label {
+        padding-right: 4px;
       }
       .pad {
         padding: 0.15rem;
-        font-size: 0.75rem;
+        font-size: 0.65rem;
         border-radius: 6px;
       }
       .step {
@@ -145,13 +181,6 @@ export class CircuitGrid extends LitElement {
         font-size: 0.55rem;
         top: 3px;
         right: 3px;
-      }
-    }
-
-    @media (max-width: 768px) and (orientation: portrait) {
-      .grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        grid-template-rows: repeat(8, 1fr);
       }
     }
   `;
@@ -177,38 +206,57 @@ export class CircuitGrid extends LitElement {
     return html`
       <div class="shell">
         <div class="grid" role="grid" aria-label="Circuit pad grid">
-          ${this.pads.map(
-            (pad) => {
-              if (!pad.note) {
-                return html`<div class="gap" aria-hidden="true"></div>`;
-              }
+          <!-- Column Header Labels -->
+          <div class="grid-label corner" aria-hidden="true"></div>
+          ${Array.from({ length: 8 }).map((_, i) => html`
+            <div class="grid-label col-label" aria-hidden="true">${i + 1}</div>
+          `)}
 
-              const step = recipeOrder.get(pad.index);
-              return html`
-              <div 
-                class=${`pad ${pad.state} ${step ? 'target' : ''}`} 
-                role="button" 
-                tabindex="0"
-                aria-label=${this.getAriaLabel(pad, step)}
-                @click=${() => this.onPadClick(pad)}
-                @keydown=${(e: KeyboardEvent) => this.onPadKeydown(e, pad)}
-              >
-                <div class="pad-inner">
-                  ${step ? html`<span class="step">${step}</span>` : null}
-                  <div>
-                    <div>${pad.label}</div>
-                    <div class="meta">${pad.row + 1}:${pad.col + 1}</div>
-                  </div>
-                </div>
-              </div>
-            `;
-            }
-          )}
+          <!-- Row 4 (pads index 0..7) -->
+          <div class="grid-label row-label" aria-hidden="true">4</div>
+          ${this.pads.slice(0, 8).map((pad) => this.renderPad(pad, recipeOrder))}
+
+          <!-- Row 3 (pads index 8..15) -->
+          <div class="grid-label row-label" aria-hidden="true">3</div>
+          ${this.pads.slice(8, 16).map((pad) => this.renderPad(pad, recipeOrder))}
+
+          <!-- Row 2 (pads index 16..23) -->
+          <div class="grid-label row-label" aria-hidden="true">2</div>
+          ${this.pads.slice(16, 24).map((pad) => this.renderPad(pad, recipeOrder))}
+
+          <!-- Row 1 (pads index 24..31) -->
+          <div class="grid-label row-label" aria-hidden="true">1</div>
+          ${this.pads.slice(24, 32).map((pad) => this.renderPad(pad, recipeOrder))}
         </div>
       </div>
     `;
   }
 
+  private renderPad(pad: CircuitPad, recipeOrder: Map<number, number>) {
+    if (!pad.note) {
+      return html`<div class="gap" aria-hidden="true"></div>`;
+    }
+
+    const step = recipeOrder.get(pad.index);
+    return html`
+      <div 
+        class=${`pad ${pad.state} ${step ? 'target' : ''}`} 
+        role="button" 
+        tabindex="0"
+        aria-label=${this.getAriaLabel(pad, step)}
+        @click=${() => this.onPadClick(pad)}
+        @keydown=${(e: KeyboardEvent) => this.onPadKeydown(e, pad)}
+      >
+        <div class="pad-inner">
+          ${step ? html`<span class="step">${step}</span>` : null}
+          <div>
+            <div>${pad.label}</div>
+            <div class="meta">${pad.row + 1}:${pad.col + 1}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
   /**
    * Triggers audio playback for the pad note.
    */

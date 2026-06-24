@@ -426,8 +426,12 @@ export class CircuitChordForge extends LitElement {
       width: 100%;
     }
 
+    .mobile-close-btn {
+      display: none;
+    }
+
     /* Responsive Media Queries */
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
       :host {
         --sidebar-left-width: 56px;
         --sidebar-right-width: 0px;
@@ -468,11 +472,11 @@ export class CircuitChordForge extends LitElement {
         top: 0;
         right: 0;
         bottom: 0;
-        width: 260px;
+        width: 280px;
         height: 100vh;
         z-index: 1000;
-        grid-column: auto;
-        grid-row: auto;
+        grid-column: 1 / -1;
+        grid-row: 1 / -1;
         background: var(--bg-charcoal);
         border-left: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 0;
@@ -487,6 +491,29 @@ export class CircuitChordForge extends LitElement {
         transform: translateX(0);
       }
 
+      .mobile-close-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        color: #888;
+        cursor: pointer;
+        z-index: 1010;
+        transition: all 0.2s ease;
+      }
+      .mobile-close-btn:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: var(--accent-cyan);
+        color: var(--accent-cyan);
+      }
+
       .sidebar-backdrop {
         position: fixed;
         top: 0;
@@ -496,11 +523,16 @@ export class CircuitChordForge extends LitElement {
         background: rgba(0, 0, 0, 0.6);
         backdrop-filter: blur(2px);
         z-index: 999;
-        display: none;
+        grid-column: 1 / -1;
+        grid-row: 1 / -1;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
       }
 
       .sidebar-backdrop.open {
-        display: block;
+        opacity: 1;
+        pointer-events: auto;
       }
 
       /* Reduce spacer elements in timeline footer on mobile */
@@ -511,7 +543,7 @@ export class CircuitChordForge extends LitElement {
       }
     }
 
-    @media (min-width: 769px) {
+    @media (min-width: 1025px) {
       .desktop-only {
         display: flex !important;
       }
@@ -543,6 +575,39 @@ export class CircuitChordForge extends LitElement {
   @state() private inversion = 0;
   @state() private source = '';
   @state() private showSettings = false;
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.loadDefaultProgression();
+  }
+
+  private loadDefaultProgression() {
+    const defaultSource = 'Cmaj7 Am7 Dm7 G7';
+    const tokens = defaultSource.match(/[A-G](?:#{1,2}|b{1,2})?(?:[^\s,|/]+)?(?:\/[A-G](?:#{1,2}|b{1,2})?)?/g) || [];
+    const parsed: ParsedChord[] = [];
+    for (const symbol of tokens) {
+      const chord = Chord.get(symbol);
+      if (!chord.empty && chord.notes.length > 0) {
+        parsed.push({
+          symbol,
+          tonic: chord.tonic,
+          quality: chord.quality,
+          notes: chord.notes,
+          intervals: chord.intervals,
+          aliases: chord.aliases,
+        });
+      }
+    }
+    if (parsed.length > 0) {
+      this.progression = parsed;
+      this.source = defaultSource;
+      this.activeIndex = 0;
+      const firstChord = parsed[0];
+      const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
+      this.originalKey = baseKey;
+      this.config = { ...this.config, key: baseKey };
+    }
+  }
 
   render() {
     const transposedProgression = this.getTransposedProgression();
@@ -638,7 +703,7 @@ export class CircuitChordForge extends LitElement {
 
           <!-- Tab 2: Data Input View -->
           <div class="data-input-view" style="display: ${this.activeTab === 'data' ? 'flex' : 'none'}">
-            <chord-input @progression-parsed=${this.onParsed}></chord-input>
+            <chord-input .value=${this.source} @progression-parsed=${this.onParsed}></chord-input>
           </div>
         </main>
 
@@ -647,6 +712,14 @@ export class CircuitChordForge extends LitElement {
 
         <!-- 4. Right Sidebar (MIDI HUD) -->
         <aside class="panel sidebar-right ${this.showSettings ? 'open' : ''}">
+          <!-- Mobile Close Button -->
+          <button class="mobile-close-btn" @click=${() => this.showSettings = false} title="Close Settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+
           <div class="midi-status">
             <span class="config-label">MIDI Status</span>
             <div class="midi-icon-wrapper connected">

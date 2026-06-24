@@ -62,7 +62,7 @@ export class ProgressionStepper extends LitElement {
       font-size: 0.85rem;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
       .sequence-track {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
