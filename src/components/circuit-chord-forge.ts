@@ -7,13 +7,12 @@ import './circuit-grid';
 import type { ChordInputParsedEventDetail, ParsedChord } from './chord-input';
 import {
   KEY_OPTIONS,
-  PAD_ANCHOR_OPTIONS,
+  SCALE_DISPLAY_NAMES,
   SCALE_OPTIONS,
   VOICING_OPTIONS,
   buildChordRecipe,
   buildCircuitGrid,
   normalizePitchClass,
-  type PadAnchorMode,
   type GridConfig,
   type ScaleMode,
   type VoicingMode,
@@ -311,16 +310,123 @@ export class CircuitChordForge extends LitElement {
       display: none;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       height: 100%;
-      gap: 32px;
+      gap: 20px;
       width: 100%;
+      overflow-y: auto;
     }
 
     /* We wrap chord-input here so it displays inside */
     chord-input {
       width: 100%;
-      max-width: 500px;
+      max-width: 600px;
+    }
+
+    /* ── Pad Picker (Data View) ─────────────────────────── */
+    .pad-picker {
+      width: 100%;
+      max-width: 720px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .pad-picker-section-label {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: #555;
+      text-transform: uppercase;
+      padding: 0 2px;
+      margin-bottom: 2px;
+    }
+
+    /* Each section (keynote / scale) has its own container */
+    .pad-picker-section {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 10px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 10px;
+    }
+
+    .pad-row {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 5px;
+    }
+
+    /* ── Base pad style — mirrors circuit-grid.ts .pad ── */
+    .picker-pad {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.65rem;
+      line-height: 1.2;
+      text-align: center;
+      padding: 4px 2px;
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      user-select: none;
+      outline: none;
+      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.04), 0 3px 6px rgba(0, 0, 0, 0.4);
+    }
+    .picker-pad:active {
+      transform: scale(0.93);
+    }
+
+    /* ── Note pads (cyan family, like circuit-grid "active" state) ── */
+    .picker-pad.pad-root {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 100%), var(--pad-scale);
+      color: rgba(0, 240, 255, 0.45);
+      border-color: rgba(0, 240, 255, 0.1);
+    }
+    .picker-pad.pad-root:hover {
+      border-color: rgba(0, 240, 255, 0.35);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.15), inset 0 1px 2px rgba(255,255,255,0.08);
+    }
+    .picker-pad.pad-root.pad-active {
+      background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%), var(--accent-cyan);
+      color: #121316;
+      border-color: rgba(255, 255, 255, 0.3);
+      box-shadow: 0 0 18px rgba(0, 240, 255, 0.55), inset 0 2px 4px rgba(255,255,255,0.4);
+    }
+    /* Dimmed/spacer pads for gap positions */
+    .picker-pad.pad-root.pad-dim {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 100%), var(--pad-chromatic);
+      color: #333;
+      border-color: rgba(255,255,255,0.03);
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+      cursor: default;
+      pointer-events: none;
+    }
+
+    /* ── Scale pads (magenta family, like circuit-grid "lit" state) ── */
+    .picker-pad.pad-scale {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 100%), var(--pad-scale);
+      color: rgba(255, 42, 159, 0.45);
+      border-color: rgba(255, 42, 159, 0.1);
+      font-size: 0.58rem;
+    }
+    .picker-pad.pad-scale:hover {
+      border-color: rgba(255, 42, 159, 0.35);
+      color: var(--accent-magenta);
+      box-shadow: 0 0 10px rgba(255, 42, 159, 0.15), inset 0 1px 2px rgba(255,255,255,0.08);
+    }
+    .picker-pad.pad-scale.pad-active {
+      background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%), var(--accent-magenta);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.25);
+      box-shadow: 0 0 20px rgba(255, 42, 159, 0.65), inset 0 2px 4px rgba(255,255,255,0.3);
     }
 
     /* Section 4: Right Sidebar (MIDI HUD / Modal on Desktop) */
@@ -850,8 +956,7 @@ export class CircuitChordForge extends LitElement {
   @state() private config: GridConfig = {
     key: 'C',
     scale: 'minor',
-    mode: 'chromatic',
-    anchorMode: 'key',
+    mode: 'collapsed',
   };
   @state() private voicing: VoicingMode = 'triad';
   @state() private autoPlay = true;
@@ -1037,40 +1142,14 @@ export class CircuitChordForge extends LitElement {
           </div>
         </nav>
 
-        <!-- 2. Top Header Bar -->
+        <!-- 2. Top Header Bar (now only shows active config summary) -->
         <header class="panel header-top">
           <div class="config-group">
-            <span class="config-label">Root Note</span>
-            <!-- Desktop Layout -->
-            <div class="tactile-group desktop-only">
-              ${KEY_OPTIONS.map(key => html`
-                <button 
-                  class="tactile-btn ${this.config.key === key ? 'active-root' : ''}"
-                  @click=${() => this.onKeyChange(key)}>
-                  ${key}
-                </button>
-              `)}
-            </div>
-            <!-- Mobile Layout -->
-            <div class="tactile-group mobile-only">
-              <select class="header-select" @change=${(e: Event) => this.onKeyChange((e.target as HTMLSelectElement).value)}>
-                ${KEY_OPTIONS.map(key => html`
-                  <option value=${key} ?selected=${this.config.key === key}>${key}</option>
-                `)}
-              </select>
-            </div>
-          </div>
-          
-          <div class="config-group">
-            <span class="config-label">Scale Type</span>
-            <div class="tactile-group">
-              <select class="header-select" @change=${(e: Event) => this.onScaleChange((e.target as HTMLSelectElement).value)}>
-                ${SCALE_OPTIONS.map(scale => html`
-                  <option value=${scale} ?selected=${this.config.scale === scale}>
-                    ${scale.toUpperCase()}
-                  </option>
-                `)}
-              </select>
+            <span class="config-label">Key / Scale</span>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span style="font-size:1rem; font-weight:800; color:var(--accent-cyan); letter-spacing:-0.02em;">${this.config.key}</span>
+              <span style="color:#444; font-size:0.8rem;">·</span>
+              <span style="font-size:0.75rem; font-weight:600; color:#aaa; text-transform:uppercase; letter-spacing:0.06em;">${this.config.scale}</span>
             </div>
           </div>
         </header>
@@ -1095,6 +1174,75 @@ export class CircuitChordForge extends LitElement {
 
           <!-- Tab 2: Data Input View -->
           <div class="data-input-view" style="display: ${this.activeTab === 'data' ? 'flex' : 'none'}">
+
+            <!-- Keynote + Scale Pad Picker — Circuit Tracks layout -->
+            <div class="pad-picker">
+
+              <!-- Keynote Section: row 1 = sharps, row 2 = naturals -->
+              <div class="pad-picker-section">
+                <div class="pad-picker-section-label">Keynote</div>
+                <!-- Row 1 (pads 1–8): gaps at positions 1, 4, 8; sharps at 2,3,5,6,7 -->
+                <div class="pad-row">
+                  ${(['', 'C#', 'D#', '', 'F#', 'G#', 'A#', ''] as string[]).map(note => note === '' ? html`
+                    <div class="picker-pad pad-root pad-dim" aria-hidden="true"></div>
+                  ` : html`
+                    <button
+                      class="picker-pad pad-root ${this.config.key === note ? 'pad-active' : ''}"
+                      @click=${() => this.onKeyChange(note)}
+                      title="Root: ${note}"
+                      aria-label="Root note ${note}">
+                      ${note}
+                    </button>
+                  `)}
+                </div>
+                <!-- Row 2 (pads 9–16): C D E F G A B + dim -->
+                <div class="pad-row">
+                  ${(['C', 'D', 'E', 'F', 'G', 'A', 'B', ''] as string[]).map(note => note === '' ? html`
+                    <div class="picker-pad pad-root pad-dim" aria-hidden="true"></div>
+                  ` : html`
+                    <button
+                      class="picker-pad pad-root ${this.config.key === note ? 'pad-active' : ''}"
+                      @click=${() => this.onKeyChange(note)}
+                      title="Root: ${note}"
+                      aria-label="Root note ${note}">
+                      ${note}
+                    </button>
+                  `)}
+                </div>
+              </div>
+
+              <!-- Scale Section: row 3 = scales 1–8, row 4 = scales 9–16 -->
+              <div class="pad-picker-section">
+                <div class="pad-picker-section-label">Scale</div>
+                <!-- Row 3 (pads 17–24): first 8 scales -->
+                <div class="pad-row">
+                  ${SCALE_OPTIONS.slice(0, 8).map(scale => html`
+                    <button
+                      class="picker-pad pad-scale ${this.config.scale === scale ? 'pad-active' : ''}"
+                      @click=${() => this.onScaleChange(scale)}
+                      title="Scale: ${scale}"
+                      aria-label="Scale ${SCALE_DISPLAY_NAMES[scale] ?? scale}">
+                      ${SCALE_DISPLAY_NAMES[scale] ?? scale}
+                    </button>
+                  `)}
+                </div>
+                <!-- Row 4 (pads 25–32): next 8 scales -->
+                <div class="pad-row">
+                  ${SCALE_OPTIONS.slice(8, 16).map(scale => html`
+                    <button
+                      class="picker-pad pad-scale ${this.config.scale === scale ? 'pad-active' : ''}"
+                      @click=${() => this.onScaleChange(scale)}
+                      title="Scale: ${scale}"
+                      aria-label="Scale ${SCALE_DISPLAY_NAMES[scale] ?? scale}">
+                      ${SCALE_DISPLAY_NAMES[scale] ?? scale}
+                    </button>
+                  `)}
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Chord Progression Input -->
             <chord-input .value=${this.source} @progression-parsed=${this.onParsed}></chord-input>
           </div>
         </main>
@@ -1120,21 +1268,6 @@ export class CircuitChordForge extends LitElement {
           <!-- Section 1: Project Settings -->
           <div class="settings-section">
             <h4 class="section-title">Project Settings</h4>
-            
-            <div class="midi-config">
-              <span class="config-label">Pad Anchor</span>
-              <select class="midi-select" .value=${this.config.anchorMode} @change=${(e: Event) => this.setAnchorMode((e.target as HTMLSelectElement).value as PadAnchorMode)}>
-                ${PAD_ANCHOR_OPTIONS.map((o) => html`<option value=${o}>${o === 'key' ? 'Project Key' : 'Chord Root'}</option>`)}
-              </select>
-            </div>
-            
-            <div class="midi-config">
-              <span class="config-label">Pad Mode</span>
-              <select class="midi-select" .value=${this.config.mode} @change=${(e: Event) => this.setMode((e.target as HTMLSelectElement).value as ScaleMode)}>
-                <option value="chromatic">Chromatic</option>
-                <option value="collapsed">Scale Collapse</option>
-              </select>
-            </div>
             
             <div class="midi-config">
               <span class="config-label">Voicing</span>
@@ -1242,7 +1375,7 @@ export class CircuitChordForge extends LitElement {
               Open the <strong>Settings Panel</strong> (gear icon in the left menu) to configure:
             </p>
             <ul class="help-list">
-              <li><strong>Pad Mode</strong>: <em>Scale Collapse</em> hides non-scale notes to maximize grid efficiency, while <em>Chromatic</em> keeps all 12 notes visible.</li>
+              <li><strong>Scale</strong>: Pick a scale in the Data Input view — the grid automatically collapses to show only notes in that scale. Selecting <em>Chromatic</em> switches to a full keyboard layout.</li>
               <li><strong>Voicing Types</strong>: Choose between Triad, Seventh, or Spread configurations.</li>
             </ul>
           </div>
@@ -1288,20 +1421,15 @@ export class CircuitChordForge extends LitElement {
     }
   }
 
-  private setAnchorMode(anchorMode: PadAnchorMode) {
-    this.config = { ...this.config, anchorMode };
-  }
-
-  private setMode(mode: ScaleMode) {
-    this.config = { ...this.config, mode };
-  }
-
   private onKeyChange(key: string) {
     this.config = { ...this.config, key };
   }
 
   private onScaleChange(scale: string) {
-    this.config = { ...this.config, scale };
+    // 'chromatic' scale → chromatic keyboard layout mode.
+    // Any other named scale → collapsed mode (only scale notes shown).
+    const mode: ScaleMode = scale === 'chromatic' ? 'chromatic' : 'collapsed';
+    this.config = { ...this.config, scale, mode };
   }
 
   private onVoicingChange(voicing: VoicingMode) {

@@ -8,8 +8,6 @@ export type ScaleMode = 'collapsed' | 'chromatic';
 export type PadState = 'dim' | 'lit' | 'active' | 'scale';
 /** Chord voicing strategy for selecting playable pad subset. */
 export type VoicingMode = 'triad' | 'seventh' | 'spread';
-/** Root anchor behavior for mapping pad notes. */
-export type PadAnchorMode = 'key' | 'chord';
 
 /**
  * User-selected grid mapping configuration.
@@ -19,10 +17,8 @@ export interface GridConfig {
   key: string;
   /** Selected scale used for collapse mode and in-scale metadata. */
   scale: string;
-  /** Active pad mode. */
+  /** Active pad mode. 'collapsed' = only scale notes; 'chromatic' = keyboard layout. */
   mode: ScaleMode;
-  /** Defines whether root follows project key or active chord tonic. */
-  anchorMode: PadAnchorMode;
 }
 
 /**
@@ -68,24 +64,48 @@ const CHROMATIC_NOTES = [
   'B',
 ];
 
+// Scale display labels mapped to Tonal.js scale names
+export const SCALE_DISPLAY_NAMES: Record<string, string> = {
+  'minor':            'Natural Minor',
+  'major':            'Major',
+  'dorian':           'Dorian',
+  'phrygian':         'Phrygian',
+  'mixolydian':       'Mixolydian',
+  'melodic minor':    'Melodic Minor',
+  'harmonic minor':   'Harmonic Minor',
+  'bebop dorian':     'Bebop Dorian',
+  'blues':            'Blues',
+  'minor pentatonic': 'Minor Pent.',
+  'hungarian minor':  'Hungarian Minor',
+  'ukrainian dorian': 'Ukrainian Dorian',
+  'marva':            'Marva',
+  'todi':             'Todi',
+  'whole tone':       'Whole Tone',
+  'chromatic':        'Chromatic',
+};
+
+// Ordered exactly as Circuit Tracks hardware (rows 3+4, left-to-right)
 export const SCALE_OPTIONS = [
-  'major',
   'minor',
+  'major',
   'dorian',
-  'mixolydian',
-  'lydian',
   'phrygian',
-  'locrian',
-  'harmonic minor',
+  'mixolydian',
   'melodic minor',
-  'major pentatonic',
-  'minor pentatonic',
+  'harmonic minor',
+  'bebop dorian',
   'blues',
+  'minor pentatonic',
+  'hungarian minor',
+  'ukrainian dorian',
+  'marva',
+  'todi',
+  'whole tone',
+  'chromatic',
 ];
 
 export const KEY_OPTIONS = CHROMATIC_NOTES;
 export const VOICING_OPTIONS: VoicingMode[] = ['triad', 'seventh', 'spread'];
-export const PAD_ANCHOR_OPTIONS: PadAnchorMode[] = ['key', 'chord'];
 
 const CHROMATIC_ROW_STRIDE = 5;
 const COLLAPSED_ROW_STRIDE = 3;
@@ -114,8 +134,8 @@ export interface ChordRecipePad {
  * @returns Array of 32 pads with mapped note and visual metadata.
  */
 export function buildCircuitGrid(chord: ParsedChord | null, config: GridConfig): CircuitPad[] {
-  const anchoredRoot = config.anchorMode === 'chord' ? chord?.tonic ?? config.key : config.key;
-  const root = normalizePitchClass(anchoredRoot) ?? 'C';
+  // Always anchor to the project key — matches Circuit Tracks hardware behavior.
+  const root = normalizePitchClass(config.key) ?? 'C';
   const rootIndex = CHROMATIC_NOTES.indexOf(root);
   const scaleNotes = getScalePitchClasses(config.key, config.scale);
   const orderedScale = buildOrderedScale(root, scaleNotes);
