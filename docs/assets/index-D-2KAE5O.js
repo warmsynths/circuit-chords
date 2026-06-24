@@ -839,6 +839,7 @@
 
       display: block;
       height: 100vh;
+      height: 100dvh;
       overflow: hidden;
       background-color: var(--bg-onyx);
       color: #ffffff;
@@ -874,6 +875,7 @@
       grid-template-rows: 48px var(--header-height) 1fr var(--footer-height);
       gap: var(--gap);
       height: calc(100vh - (var(--gap) * 2));
+      height: calc(100dvh - (var(--gap) * 2));
       max-width: 1600px;
       margin: 0 auto;
     }
@@ -1401,6 +1403,16 @@
         grid-template-rows: 48px var(--header-height) 1fr var(--footer-height);
         gap: var(--gap);
         height: calc(100vh - (var(--gap) * 2));
+        height: calc(100dvh - (var(--gap) * 2));
+      }
+
+      .sidebar-left {
+        padding: 16px 0;
+        gap: 12px;
+      }
+
+      .nav-bottom {
+        gap: 12px;
       }
 
       .brand-header {
@@ -1430,7 +1442,9 @@
         bottom: 0;
         width: 280px;
         height: 100vh;
+        height: 100dvh;
         max-height: 100vh;
+        max-height: 100dvh;
         z-index: 1000;
         background: var(--bg-charcoal);
         border-left: 1px solid rgba(255, 255, 255, 0.1);
