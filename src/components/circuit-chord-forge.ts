@@ -623,8 +623,9 @@ export class CircuitChordForge extends LitElement {
             <svg class="brand-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect width="32" height="32" rx="6" fill="#ffffff" />
               <g transform="rotate(-45 16 16)" fill="#1a1b20">
-                <rect x="8.5" y="4.5" width="6" height="23" rx="2.5" />
-                <rect x="17.5" y="13.5" width="6" height="14" rx="2.5" />
+                <rect x="6.5" y="6" width="5" height="14" rx="2.5" />
+                <rect x="13.5" y="12" width="5" height="14" rx="2.5" />
+                <rect x="20.5" y="6" width="5" height="14" rx="2.5" />
               </g>
             </svg>
             <div class="brand-title">circuit chords</div>
