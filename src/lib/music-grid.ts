@@ -541,7 +541,7 @@ function rotate<T>(items: T[], startIndex: number): T[] {
  * @param note Any note string (with or without octave).
  * @returns Supported pitch class or null when conversion fails.
  */
-function normalizePitchClass(note: string | null | undefined): string | null {
+export function normalizePitchClass(note: string | null | undefined): string | null {
   if (!note) {
     return null;
   }

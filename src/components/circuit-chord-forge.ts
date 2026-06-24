@@ -12,6 +12,7 @@ import {
   VOICING_OPTIONS,
   buildChordRecipe,
   buildCircuitGrid,
+  normalizePitchClass,
   type PadAnchorMode,
   type GridConfig,
   type ScaleMode,
@@ -430,6 +431,19 @@ export class CircuitChordForge extends LitElement {
       display: none;
     }
 
+    .scale-warning {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 170, 0, 0.1);
+      border: 1px solid rgba(255, 170, 0, 0.2);
+      color: #ffaa00;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+
     /* Responsive Media Queries */
     @media (max-width: 1024px) {
       :host {
@@ -605,7 +619,9 @@ export class CircuitChordForge extends LitElement {
       const firstChord = parsed[0];
       const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
       this.originalKey = baseKey;
-      this.config = { ...this.config, key: baseKey };
+      const isMinor = firstChord?.quality?.toLowerCase().includes('minor') || firstChord?.symbol?.includes('m');
+      const defaultScale = isMinor ? 'minor' : 'major';
+      this.config = { ...this.config, key: baseKey, scale: defaultScale };
     }
   }
 
@@ -614,6 +630,11 @@ export class CircuitChordForge extends LitElement {
     const activeChord = transposedProgression[this.activeIndex] ?? null;
     const pads = buildCircuitGrid(activeChord, this.config);
     const recipe = buildChordRecipe(activeChord, pads, this.voicing, this.inversion);
+
+    const uniqueTargets = activeChord ? activeChord.notes.map(n => normalizePitchClass(n)).filter(Boolean) : [];
+    const missingNotes = activeChord && this.config.mode === 'collapsed'
+      ? uniqueTargets.filter(note => !pads.some(p => p.note === note))
+      : [];
 
     return html`
       <div class="app-grid">
@@ -697,6 +718,17 @@ export class CircuitChordForge extends LitElement {
 
         <!-- 3. Center Main Content Area -->
         <main class="panel main-content">
+          ${missingNotes.length > 0 ? html`
+            <div class="scale-warning">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; flex-shrink: 0;">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <span>Chord note(s) (${missingNotes.join(', ')}) outside scale are hidden in Scale Collapse mode. Switch to Chromatic mode to play.</span>
+            </div>
+          ` : null}
+
           <!-- Tab 1: Grid View -->
           <div class="circuit-grid" style="display: ${this.activeTab === 'grid' ? 'block' : 'none'}">
             <circuit-grid .pads=${pads} .recipe=${recipe}></circuit-grid>
@@ -830,8 +862,11 @@ export class CircuitChordForge extends LitElement {
     const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
     this.originalKey = baseKey;
 
+    const isMinor = firstChord?.quality?.toLowerCase().includes('minor') || firstChord?.symbol?.includes('m');
+    const defaultScale = isMinor ? 'minor' : 'major';
+
     if (firstChord?.tonic) {
-      this.config = { ...this.config, key: baseKey };
+      this.config = { ...this.config, key: baseKey, scale: defaultScale };
     }
 
     if (this.autoPlay && this.progression.length > 0) {
