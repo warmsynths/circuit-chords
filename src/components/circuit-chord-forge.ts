@@ -564,47 +564,64 @@ export class CircuitChordForge extends LitElement {
       padding-bottom: 6px;
     }
 
-    .midi-devices-list {
-      margin-top: 4px;
+    .status-info {
+      text-align: center;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
+      width: 100%;
     }
 
-    .devices-ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .devices-ul li {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--bg-onyx);
-      padding: 8px 12px;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .device-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--status-green);
-      box-shadow: 0 0 6px var(--status-green);
-    }
-
-    .device-name {
+    .active-device-name {
       font-size: 0.75rem;
-      font-weight: 500;
-      color: #ddd;
+      font-weight: 600;
+      color: #aaa;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      padding: 0 8px;
+    }
+
+    .midi-btn {
+      width: 100%;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      outline: none;
+    }
+    
+    .midi-btn.connect {
+      background: var(--accent-cyan);
+      color: var(--bg-charcoal);
+      border-color: var(--accent-cyan);
+    }
+    .midi-btn.connect:hover {
+      background: #00d8e6;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+    }
+    .midi-btn.connect:disabled {
+      background: #222;
+      color: #555;
+      border-color: #333;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    
+    .midi-btn.disconnect {
+      background: #251216;
+      color: var(--accent-magenta);
+      border-color: rgba(255, 0, 127, 0.3);
+    }
+    .midi-btn.disconnect:hover {
+      background: #3a151b;
+      border-color: var(--accent-magenta);
+      box-shadow: 0 0 12px rgba(255, 0, 127, 0.2);
     }
 
     .no-devices-msg {
@@ -845,6 +862,8 @@ export class CircuitChordForge extends LitElement {
   @state() private showHelp = false;
   @state() private midiConnected = false;
   @state() private midiDevices: string[] = [];
+  @state() private selectedMidiDevice = '';
+  @state() private activeMidiDevice: string | null = null;
 
   private toggleHelp() {
     this.showHelp = !this.showHelp;
@@ -884,13 +903,11 @@ export class CircuitChordForge extends LitElement {
   }
 
   private updateMidiStatus(access: any) {
-    let hasDevice = false;
     const devices: string[] = [];
     
     if (access && access.inputs) {
       access.inputs.forEach((input: any) => {
         if (input.state === 'connected') {
-          hasDevice = true;
           if (input.name && !devices.includes(input.name)) {
             devices.push(input.name);
           }
@@ -900,7 +917,6 @@ export class CircuitChordForge extends LitElement {
     if (access && access.outputs) {
       access.outputs.forEach((output: any) => {
         if (output.state === 'connected') {
-          hasDevice = true;
           if (output.name && !devices.includes(output.name)) {
             devices.push(output.name);
           }
@@ -908,8 +924,34 @@ export class CircuitChordForge extends LitElement {
       });
     }
     
-    this.midiConnected = hasDevice;
     this.midiDevices = devices;
+
+    // Update selected MIDI device if not set or no longer available
+    if (this.selectedMidiDevice === '' || !devices.includes(this.selectedMidiDevice)) {
+      this.selectedMidiDevice = devices.length > 0 ? devices[0] : '';
+    }
+
+    // If active device is disconnected, reset state
+    if (this.activeMidiDevice !== null && !devices.includes(this.activeMidiDevice)) {
+      this.activeMidiDevice = null;
+      this.midiConnected = false;
+    } else if (this.activeMidiDevice !== null) {
+      this.midiConnected = true;
+    } else {
+      this.midiConnected = false;
+    }
+  }
+
+  private connectMidiDevice() {
+    if (this.selectedMidiDevice) {
+      this.activeMidiDevice = this.selectedMidiDevice;
+      this.midiConnected = true;
+    }
+  }
+
+  private disconnectMidiDevice() {
+    this.activeMidiDevice = null;
+    this.midiConnected = false;
   }
 
   private loadDefaultProgression() {
@@ -1118,27 +1160,41 @@ export class CircuitChordForge extends LitElement {
                   <path d="M 45 90 L 50 80 L 55 90 Z" fill="currentColor" stroke="none" />
                 </svg>
               </div>
-              <div class="status-text ${this.midiConnected ? 'connected' : 'disconnected'}">
-                ${this.midiConnected ? 'CONNECTED' : 'DISCONNECTED'}
+              <div class="status-info">
+                <div class="status-text ${this.midiConnected ? 'connected' : 'disconnected'}">
+                  ${this.midiConnected ? 'CONNECTED' : 'DISCONNECTED'}
+                </div>
+                ${this.midiConnected && this.activeMidiDevice ? html`
+                  <div class="active-device-name" title="${this.activeMidiDevice}">
+                    ${this.activeMidiDevice}
+                  </div>
+                ` : ''}
               </div>
             </div>
 
-            <!-- Dynamic list of connected MIDI devices -->
-            ${this.midiConnected ? html`
-              <div class="midi-devices-list">
-                <span class="config-label">Connected Devices</span>
-                <ul class="devices-ul">
+            <!-- Device selection & connection trigger -->
+            ${this.midiDevices.length > 0 ? html`
+              <div class="midi-config">
+                <span class="config-label">Available Devices</span>
+                <select class="midi-select" .value=${this.selectedMidiDevice} @change=${(e: Event) => this.selectedMidiDevice = (e.target as HTMLSelectElement).value}>
                   ${this.midiDevices.map(device => html`
-                    <li>
-                      <span class="device-dot"></span>
-                      <span class="device-name" title="${device}">${device}</span>
-                    </li>
+                    <option value=${device} ?selected=${this.selectedMidiDevice === device}>${device}</option>
                   `)}
-                </ul>
+                </select>
+                
+                ${this.midiConnected && this.activeMidiDevice === this.selectedMidiDevice ? html`
+                  <button class="midi-btn disconnect" @click=${this.disconnectMidiDevice}>
+                    Disconnect
+                  </button>
+                ` : html`
+                  <button class="midi-btn connect" @click=${this.connectMidiDevice} ?disabled=${!this.selectedMidiDevice}>
+                    Connect
+                  </button>
+                `}
               </div>
             ` : html`
               <div class="no-devices-msg">
-                No external MIDI devices connected
+                No MIDI devices detected
               </div>
             `}
           </div>
