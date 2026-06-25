@@ -1184,7 +1184,7 @@ export class CircuitChordForge extends LitElement {
           </div>
         </nav>
 
-        <!-- 2. Top Header Bar (now only shows active config summary) -->
+        <!-- 2. Top Header Bar (active config summary + voicing toggle) -->
         <header class="panel header-top">
           <div class="config-group">
             <span class="config-label">Key / Scale</span>
@@ -1192,6 +1192,22 @@ export class CircuitChordForge extends LitElement {
               <span style="font-size:1rem; font-weight:800; color:var(--accent-cyan); letter-spacing:-0.02em;">${this.config.key}</span>
               <span style="color:#444; font-size:0.8rem;">·</span>
               <span style="font-size:0.75rem; font-weight:600; color:#aaa; text-transform:uppercase; letter-spacing:0.06em;">${this.config.scale}</span>
+            </div>
+          </div>
+
+          <div style="flex:1;"></div>
+
+          <div class="config-group">
+            <span class="config-label">Voicing</span>
+            <div class="tactile-group">
+              ${VOICING_OPTIONS.map((v) => html`
+                <button
+                  class="tactile-btn ${this.voicing === v ? 'active-root' : ''}"
+                  @click=${() => this.onVoicingChange(v as VoicingMode)}
+                  title="Voicing: ${v}">
+                  ${v === 'triad' ? '3' : v === 'seventh' ? '7th' : v}
+                </button>
+              `)}
             </div>
           </div>
         </header>
@@ -1313,19 +1329,7 @@ export class CircuitChordForge extends LitElement {
             <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #ffffff; letter-spacing: -0.02em;">Settings</h3>
           </div>
 
-          <!-- Section 1: Project Settings -->
-          <div class="settings-section">
-            <h4 class="section-title">Project Settings</h4>
-            
-            <div class="midi-config">
-              <span class="config-label">Voicing</span>
-              <select class="midi-select" .value=${this.voicing} @change=${(e: Event) => this.onVoicingChange((e.target as HTMLSelectElement).value as VoicingMode)}>
-                ${VOICING_OPTIONS.map((v) => html`<option value=${v}>${v}</option>`)}
-              </select>
-            </div>
-          </div>
-
-          <!-- Section 2: MIDI Settings -->
+          <!-- MIDI Settings -->
           <div class="settings-section">
             <h4 class="section-title">MIDI Settings</h4>
             
