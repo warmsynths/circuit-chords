@@ -43,18 +43,18 @@ const sampler = new Tone.Sampler({
 
 /**
  * Plays a single note using the sampled Rhodes electric piano.
- * Starts Tone.js audio context on user gesture if not already running.
+ * Audio playback only proceeds if the Tone.js audio context is in the 'running' state.
  *
  * @param noteName Note name with octave, e.g. "C4" or "D#5".
  * @param duration Duration in seconds.
  */
 export function playNote(noteName: string, duration = 0.35): void {
+  if (Tone.context.state !== 'running') {
+    console.warn("Audio playback skipped: AudioContext is suspended. Click the audio icon in the header to enable.");
+    return;
+  }
   try {
-    Tone.start().then(() => {
-      sampler.triggerAttackRelease(noteName, duration);
-    }).catch((e) => {
-      console.warn("Audio playback gesture failed:", e);
-    });
+    sampler.triggerAttackRelease(noteName, duration);
   } catch (e) {
     console.warn("Audio playback failed:", e);
   }
@@ -62,7 +62,7 @@ export function playNote(noteName: string, duration = 0.35): void {
 
 /**
  * Plays a chord of notes simultaneously using the sampled Rhodes electric piano.
- * Starts Tone.js audio context on user gesture if not already running.
+ * Audio playback only proceeds if the Tone.js audio context is in the 'running' state.
  * Velocity is scaled down proportionally to the number of notes to prevent
  * the summed signal from clipping before reaching the limiter.
  *
@@ -70,18 +70,59 @@ export function playNote(noteName: string, duration = 0.35): void {
  * @param duration Duration in seconds.
  */
 export function playChord(noteNames: string[], duration = 0.7): void {
+  if (Tone.context.state !== 'running') {
+    console.warn("Audio playback skipped: AudioContext is suspended. Click the audio icon in the header to enable.");
+    return;
+  }
   try {
-    Tone.start().then(() => {
-      // Scale velocity down as note count grows to pre-empt loudness buildup.
-      // Capped at a floor of 0.4 so chords never sound too quiet.
-      const count = noteNames.length;
-      const velocity = count <= 1 ? 1 : Math.max(0.4, 1 / Math.sqrt(count));
-      sampler.triggerAttackRelease(noteNames, duration, Tone.now(), velocity);
-    }).catch((e) => {
-      console.warn("Audio playback gesture failed:", e);
-    });
+    // Scale velocity down as note count grows to pre-empt loudness buildup.
+    // Capped at a floor of 0.4 so chords never sound too quiet.
+    const count = noteNames.length;
+    const velocity = count <= 1 ? 1 : Math.max(0.4, 1 / Math.sqrt(count));
+    sampler.triggerAttackRelease(noteNames, duration, Tone.now(), velocity);
   } catch (e) {
     console.warn("Audio playback failed:", e);
   }
+}
+
+/**
+ * Starts Tone.js audio context and waits for samples to load.
+ * Plays a soft C4 Rhodes note to confirm sound is active.
+ */
+export async function startAudio(): Promise<void> {
+  await Tone.start();
+  await Tone.loaded();
+  // Play a soft verification note on activation
+  sampler.triggerAttackRelease("C4", "8n");
+}
+
+/**
+ * Suspends Tone.js audio context.
+ */
+export async function suspendAudio(): Promise<void> {
+  if (Tone.context && Tone.context.rawContext) {
+    await (Tone.context.rawContext as AudioContext).suspend();
+  }
+}
+
+/**
+ * Checks if Tone.js audio context is active/running.
+ */
+export function isAudioActive(): boolean {
+  return Tone.context.state === 'running';
+}
+
+/**
+ * Registers a statechange event listener on the native AudioContext.
+ * Returns a function to clean up/remove the event listener.
+ */
+export function registerAudioStateListener(listener: (state: AudioContextState) => void): () => void {
+  const ctx = Tone.context.rawContext as AudioContext;
+  if (ctx && typeof ctx.addEventListener === 'function') {
+    const callback = () => listener(ctx.state);
+    ctx.addEventListener('statechange', callback);
+    return () => ctx.removeEventListener('statechange', callback);
+  }
+  return () => {};
 }
 

@@ -17,7 +17,7 @@ import {
   type ScaleMode,
   type VoicingMode,
 } from '../lib/music-grid';
-import { playChord } from '../lib/audio';
+import { playChord, isAudioActive, startAudio, suspendAudio, registerAudioStateListener } from '../lib/audio';
 
 @customElement('circuit-chord-forge')
 export class CircuitChordForge extends LitElement {
@@ -157,6 +157,40 @@ export class CircuitChordForge extends LitElement {
     .midi-led.connected {
       background: var(--status-green);
       box-shadow: 0 0 8px var(--status-green);
+    }
+
+    .audio-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-onyx);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #666;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 0;
+    }
+    .audio-btn:hover {
+      color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+    }
+    .audio-btn.active {
+      color: var(--status-green);
+      border-color: var(--status-green);
+      box-shadow: 0 0 10px rgba(57, 255, 22, 0.2);
+    }
+    .audio-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     /* Section 1: Left Navigation Tab Bar */
@@ -988,6 +1022,8 @@ export class CircuitChordForge extends LitElement {
   `;
 
   // === State Variables ===
+  @state() private audioActive = false;
+  private audioCleanup: (() => void) | null = null;
   @state() private activeTab: 'grid' | 'data' | 'input' = 'grid';
   @state() private progression: ParsedChord[] = [];
   @state() private originalKey = 'C';
@@ -1023,10 +1059,35 @@ export class CircuitChordForge extends LitElement {
     }
   }
 
+  private async toggleAudio() {
+    try {
+      if (this.audioActive) {
+        await suspendAudio();
+      } else {
+        await startAudio();
+      }
+    } catch (e) {
+      console.warn("Failed to toggle audio:", e);
+    }
+  }
+
   connectedCallback() {
     super.connectedCallback();
     this.loadDefaultProgression();
     this.initMidi();
+
+    // Initialize audio state and register state change listener
+    this.audioActive = isAudioActive();
+    this.audioCleanup = registerAudioStateListener((state) => {
+      this.audioActive = state === 'running';
+    });
+  }
+
+  disconnectedCallback() {
+    if (this.audioCleanup) {
+      this.audioCleanup();
+    }
+    super.disconnectedCallback();
   }
 
   private initMidi() {
@@ -1155,6 +1216,21 @@ export class CircuitChordForge extends LitElement {
             <div class="brand-title">circuit chords</div>
           </div>
           <div class="brand-right">
+            <!-- Audio State Button -->
+            <button class="audio-btn ${this.audioActive ? 'active' : ''}" @click=${this.toggleAudio} title="${this.audioActive ? 'Disable Audio' : 'Enable Audio'}">
+              ${this.audioActive ? html`
+                <svg viewBox="0 0 24 24">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+              ` : html`
+                <svg viewBox="0 0 24 24">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <line x1="23" y1="9" x2="17" y2="15"></line>
+                  <line x1="17" y1="9" x2="23" y2="15"></line>
+                </svg>
+              `}
+            </button>
             <div class="midi-led-group">
               <span class="midi-led ${this.midiConnected ? 'connected' : ''}"></span>
               WebMIDI
