@@ -762,7 +762,7 @@
               <div class="pad-picker-section">
                 <div class="pad-picker-section-label">Keynote</div>
                 <!-- Row 1 (pads 1–8): gaps at positions 1, 4, 8; sharps at 2,3,5,6,7 -->
-                <div class="pad-row">
+                <div class="pad-row keynote-row">
                   ${["","C#","D#","","F#","G#","A#",""].map(o=>o===""?H`
                     <div class="picker-pad pad-root pad-dim" aria-hidden="true"></div>
                   `:H`
@@ -776,7 +776,7 @@
                   `)}
                 </div>
                 <!-- Row 2 (pads 9–16): C D E F G A B + dim -->
-                <div class="pad-row">
+                <div class="pad-row keynote-row">
                   ${["C","D","E","F","G","A","B",""].map(o=>o===""?H`
                     <div class="picker-pad pad-root pad-dim" aria-hidden="true"></div>
                   `:H`
@@ -795,7 +795,7 @@
               <div class="pad-picker-section">
                 <div class="pad-picker-section-label">Scale</div>
                 <!-- Row 3 (pads 17–24): first 8 scales -->
-                <div class="pad-row">
+                <div class="pad-row scale-row">
                   ${Zr.slice(0,8).map(o=>H`
                     <button
                       class="picker-pad pad-scale ${this.config.scale===o?"pad-active":""}"
@@ -807,7 +807,7 @@
                   `)}
                 </div>
                 <!-- Row 4 (pads 25–32): next 8 scales -->
-                <div class="pad-row">
+                <div class="pad-row scale-row">
                   ${Zr.slice(8,16).map(o=>H`
                     <button
                       class="picker-pad pad-scale ${this.config.scale===o?"pad-active":""}"
@@ -1215,6 +1215,7 @@
       letter-spacing: 0.15em;
       color: #888;
       text-transform: uppercase;
+      white-space: nowrap;
     }
 
     .tactile-group {
@@ -1960,6 +1961,65 @@
         padding: 0 8px;
         grid-column: 2 / 3;
         grid-row: 4 / 5;
+      }
+
+      /* Mobile styling for Top Header config */
+      .header-top {
+        padding: 0 12px;
+        gap: 12px;
+      }
+
+      .header-top .tactile-btn {
+        min-width: 30px;
+        padding: 6px 8px;
+        font-size: 0.75rem;
+      }
+
+      /* Mobile styling for Key/Scale picker */
+      .data-input-view {
+        gap: 16px;
+      }
+
+      .pad-picker {
+        gap: 10px;
+      }
+
+      .pad-picker-section {
+        padding: 12px;
+        gap: 8px;
+      }
+
+      .pad-picker-section-label {
+        font-size: 0.65rem;
+        letter-spacing: 0.15em;
+        color: #777;
+        margin-bottom: 4px;
+      }
+
+      /* Keynote grid on mobile */
+      .pad-row.keynote-row {
+        gap: 4px;
+      }
+
+      .picker-pad.pad-root {
+        aspect-ratio: 0.95;
+        font-size: 0.7rem;
+      }
+
+      /* Scale grid on mobile */
+      .pad-row.scale-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+      }
+
+      .picker-pad.pad-scale {
+        aspect-ratio: auto;
+        height: 42px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        padding: 6px 10px;
+        border-radius: 8px;
       }
     }
 
