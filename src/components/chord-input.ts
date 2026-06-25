@@ -184,7 +184,7 @@ export class ChordInput extends LitElement {
             id="chord-progression"
             type="text"
             .value=${this.value}
-            placeholder="e.g. Cmaj7 Am7 Dm7 G7"
+            placeholder="e.g. Cmaj7 Am7 | Dm7 > G7"
             @input=${this.onInput}
             @keydown=${this.onKeydown}
           />
@@ -194,7 +194,7 @@ export class ChordInput extends LitElement {
 
         ${this.error 
           ? html`<div class="error">${this.error}</div>` 
-          : html`<div class="hint">Enter chord symbols separated by spaces (e.g., Cmaj7 Am7 F G9). Press Enter to parse.</div>`}
+          : html`<div class="hint">Separate chords with spaces, <code>|</code>, <code>&gt;</code>, <code>→</code>, <code>-</code>, or commas — any notation works.</div>`}
       </div>
     `;
   }
@@ -296,14 +296,34 @@ export class ChordInput extends LitElement {
   }
 
   /**
+   * Strips separator characters from the source string, normalising them
+   * all to spaces so the chord regex only sees clean chord tokens.
+   *
+   * Handled separators: | > → -> – — , ; : and newlines.
+   * Characters that are part of chord names (# b / + ° Δ) are left intact.
+   *
+   * @param source Raw user input.
+   * @returns Cleaned string with separators replaced by spaces.
+   */
+  private sanitize(source: string): string {
+    return source
+      .replace(/->|→|–|—/g, ' ')        // text/unicode arrows and dashes
+      .replace(/[|>,;:]/g, ' ')          // bars, greater-than, commas, colons
+      .replace(/[\r\n]+/g, ' ')          // newlines (pasted chord charts)
+      .replace(/\s+/g, ' ')              // collapse multiple spaces
+      .trim();
+  }
+
+  /**
    * Captures chord-like symbols while ignoring separators such as | and commas.
     *
     * @param source Freeform progression text.
     * @returns Tokenized chord-like strings suitable for Tonal parsing.
    */
   private tokenize(source: string): string[] {
+    const cleaned = this.sanitize(source);
     const chordTokenRegex = /[A-G](?:#{1,2}|b{1,2})?(?:[^\s,|/]+)?(?:\/[A-G](?:#{1,2}|b{1,2})?)?/g;
-    const matches = source.match(chordTokenRegex);
+    const matches = cleaned.match(chordTokenRegex);
     return matches ? matches.map((token) => token.trim()) : [];
   }
 }
