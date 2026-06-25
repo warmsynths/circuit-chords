@@ -129,6 +129,37 @@ export class ChordInput extends LitElement {
       padding: 8px 12px;
       margin-top: 4px;
     }
+
+    .btn-clear {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px 18px;
+      font: inherit;
+      font-weight: 700;
+      background: transparent;
+      color: #666;
+      cursor: pointer;
+      box-shadow: none;
+      transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+    }
+
+    .btn-clear:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #ccc;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-clear:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    .btn-clear:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
   `;
 
   @property({ type: String })
@@ -158,6 +189,7 @@ export class ChordInput extends LitElement {
             @keydown=${this.onKeydown}
           />
           <button ?disabled=${!this.value.trim()} @click=${this.parseAndEmit}>Parse</button>
+          <button class="btn-clear" ?disabled=${!this.value.trim()} @click=${this.clearInput} title="Clear progression">Clear</button>
         </div>
 
         ${this.error 
@@ -212,6 +244,21 @@ export class ChordInput extends LitElement {
     this.dispatchEvent(
       new CustomEvent<ChordInputParsedEventDetail>('progression-parsed', {
         detail,
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  /**
+   * Clears the input field and emits an empty progression so the parent resets.
+   */
+  private clearInput() {
+    this.value = '';
+    this.error = '';
+    this.dispatchEvent(
+      new CustomEvent<ChordInputParsedEventDetail>('progression-parsed', {
+        detail: { progression: [], source: '' },
         bubbles: true,
         composed: true,
       })

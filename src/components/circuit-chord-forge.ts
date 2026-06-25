@@ -305,7 +305,7 @@ export class CircuitChordForge extends LitElement {
       width: 100%;
     }
 
-    /* Tab 2: Data Input View */
+    /* Tab 2: Key & Scale Pad Picker */
     .data-input-view {
       display: none;
       flex-direction: column;
@@ -315,6 +315,47 @@ export class CircuitChordForge extends LitElement {
       gap: 20px;
       width: 100%;
       overflow-y: auto;
+    }
+
+    /* Tab 3: Chord Input View */
+    .chord-input-view {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 24px;
+      width: 100%;
+      padding: 0 16px;
+    }
+
+    .chord-input-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .chord-input-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+
+    .chord-input-hint {
+      font-size: 0.78rem;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .chord-input-hint code {
+      color: var(--accent-cyan);
+      background: var(--bg-onyx);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-family: 'Fira Code', 'Consolas', monospace;
     }
 
     /* We wrap chord-input here so it displays inside */
@@ -383,16 +424,15 @@ export class CircuitChordForge extends LitElement {
       transform: scale(0.93);
     }
 
-    /* ── Note pads (cyan family, like circuit-grid "active" state) ── */
+    /* ── Note pads — dark "off" state, cyan when selected ── */
     .picker-pad.pad-root {
-      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 100%), var(--pad-scale);
-      color: rgba(0, 240, 255, 0.45);
-      border-color: rgba(0, 240, 255, 0.1);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 100%), var(--pad-scale);
+      color: #ccc;
+      border-color: rgba(255, 255, 255, 0.05);
     }
     .picker-pad.pad-root:hover {
-      border-color: rgba(0, 240, 255, 0.35);
-      color: var(--accent-cyan);
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.15), inset 0 1px 2px rgba(255,255,255,0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #fff;
     }
     .picker-pad.pad-root.pad-active {
       background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%), var(--accent-cyan);
@@ -410,17 +450,16 @@ export class CircuitChordForge extends LitElement {
       pointer-events: none;
     }
 
-    /* ── Scale pads (magenta family, like circuit-grid "lit" state) ── */
+    /* ── Scale pads — dark "off" state, magenta when selected ── */
     .picker-pad.pad-scale {
-      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 100%), var(--pad-scale);
-      color: rgba(255, 42, 159, 0.45);
-      border-color: rgba(255, 42, 159, 0.1);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 100%), var(--pad-scale);
+      color: #ccc;
+      border-color: rgba(255, 255, 255, 0.05);
       font-size: 0.58rem;
     }
     .picker-pad.pad-scale:hover {
-      border-color: rgba(255, 42, 159, 0.35);
-      color: var(--accent-magenta);
-      box-shadow: 0 0 10px rgba(255, 42, 159, 0.15), inset 0 1px 2px rgba(255,255,255,0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #fff;
     }
     .picker-pad.pad-scale.pad-active {
       background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%), var(--accent-magenta);
@@ -949,7 +988,7 @@ export class CircuitChordForge extends LitElement {
   `;
 
   // === State Variables ===
-  @state() private activeTab: 'grid' | 'data' = 'grid';
+  @state() private activeTab: 'grid' | 'data' | 'input' = 'grid';
   @state() private progression: ParsedChord[] = [];
   @state() private originalKey = 'C';
   @state() private activeIndex = 0;
@@ -1128,8 +1167,11 @@ export class CircuitChordForge extends LitElement {
           <button class="nav-btn ${this.activeTab === 'grid' ? 'active' : ''}" title="Grid View" @click=${() => this.activeTab = 'grid'}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
           </button>
-          <button class="nav-btn ${this.activeTab === 'data' ? 'active' : ''}" title="Data Input View" @click=${() => this.activeTab = 'data'}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <button class="nav-btn ${this.activeTab === 'data' ? 'active' : ''}" title="Key &amp; Scale" @click=${() => this.activeTab = 'data'}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </button>
+          <button class="nav-btn ${this.activeTab === 'input' ? 'active' : ''}" title="Chord Input" @click=${() => this.activeTab = 'input'}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
           </button>
           <div class="nav-divider"></div>
           <div class="nav-bottom">
@@ -1172,7 +1214,7 @@ export class CircuitChordForge extends LitElement {
             <circuit-grid .pads=${pads} .recipe=${recipe}></circuit-grid>
           </div>
 
-          <!-- Tab 2: Data Input View -->
+          <!-- Tab 2: Key & Scale Pad Picker -->
           <div class="data-input-view" style="display: ${this.activeTab === 'data' ? 'flex' : 'none'}">
 
             <!-- Keynote + Scale Pad Picker — Circuit Tracks layout -->
@@ -1241,8 +1283,14 @@ export class CircuitChordForge extends LitElement {
               </div>
 
             </div>
+          </div>
 
-            <!-- Chord Progression Input -->
+          <!-- Tab 3: Chord Input -->
+          <div class="chord-input-view" style="display: ${this.activeTab === 'input' ? 'flex' : 'none'}">
+            <div class="chord-input-header">
+              <div class="chord-input-title">Chord Progression</div>
+              <div class="chord-input-hint">Enter chords separated by spaces — e.g. <code>Cmaj7 Am7 Dm7 G7</code></div>
+            </div>
             <chord-input .value=${this.source} @progression-parsed=${this.onParsed}></chord-input>
           </div>
         </main>
@@ -1463,7 +1511,9 @@ export class CircuitChordForge extends LitElement {
       setTimeout(() => this.playActiveVoicing(), 50);
     }
     
-    this.activeTab = 'grid'; // Switch back to grid view so user sees pads
+    if (this.progression.length > 0) {
+      this.activeTab = 'grid'; // Switch back to grid view so user sees pads
+    }
   }
 
   private getTransposedProgression(): ParsedChord[] {
