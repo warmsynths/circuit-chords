@@ -81,6 +81,7 @@ Implemented now:
 - Grid mapping
 - Mode/key/scale/voicing config
 - Master Stage + active chord sync
+
 Planned next phases:
 
 - WebMIDI audition/send to hardware
