@@ -1104,6 +1104,9 @@ export class CircuitChordForge extends LitElement {
   @state() private midiDevices: string[] = [];
   @state() private selectedMidiDevice = '';
   @state() private activeMidiDevice: string | null = null;
+  @state() private selectedMidiChannel = 1;
+  private midiAccess: any = null;
+  private activeMidiTimeouts: Map<number, ReturnType<typeof setTimeout>> = new Map();
 
   private toggleHelp() {
     this.showHelp = !this.showHelp;
@@ -1154,6 +1157,7 @@ export class CircuitChordForge extends LitElement {
     if (typeof navigator !== 'undefined' && 'requestMIDIAccess' in navigator) {
       (navigator as any).requestMIDIAccess()
         .then((access: any) => {
+          this.midiAccess = access;
           this.updateMidiStatus(access);
           access.onstatechange = () => {
             this.updateMidiStatus(access);
@@ -1363,7 +1367,7 @@ export class CircuitChordForge extends LitElement {
 
           <!-- Tab 1: Grid View -->
           <div class="circuit-grid" style="display: ${this.activeTab === 'grid' ? 'block' : 'none'}">
-            <circuit-grid .pads=${pads} .recipe=${recipe}></circuit-grid>
+            <circuit-grid .pads=${pads} .recipe=${recipe} @pad-clicked=${(e: CustomEvent<any>) => this.onPadClicked(e)}></circuit-grid>
           </div>
 
           <!-- Tab 2: Key & Scale Pad Picker -->
@@ -1502,6 +1506,13 @@ export class CircuitChordForge extends LitElement {
                     <option value=${device} ?selected=${this.selectedMidiDevice === device}>${device}</option>
                   `)}
                 </select>
+
+                <span class="config-label" style="margin-top: 8px;">MIDI Channel</span>
+                <select class="midi-select" .value=${this.selectedMidiChannel.toString()} @change=${(e: Event) => this.selectedMidiChannel = parseInt((e.target as HTMLSelectElement).value, 10)}>
+                  ${Array.from({ length: 16 }, (_, i) => i + 1).map(channel => html`
+                    <option value=${channel.toString()} ?selected=${this.selectedMidiChannel === channel}>Channel ${channel}</option>
+                  `)}
+                </select>
                 
                 ${this.midiConnected && this.activeMidiDevice === this.selectedMidiDevice ? html`
                   <button class="midi-btn disconnect" @click=${this.disconnectMidiDevice}>
@@ -1606,6 +1617,56 @@ export class CircuitChordForge extends LitElement {
 
     if (midiNotes.length > 0) {
       playChord(midiNotes);
+      this.sendMidiNotes(midiNotes, 700);
+    }
+  }
+
+  private sendMidiNotes(notes: string[], durationMs: number = 700) {
+    if (!this.midiConnected || !this.activeMidiDevice || !this.midiAccess) return;
+
+    let output: any = null;
+    for (const out of this.midiAccess.outputs.values()) {
+      if (out.name === this.activeMidiDevice) {
+        output = out;
+        break;
+      }
+    }
+    if (!output) return;
+
+    const channelOffset = (this.selectedMidiChannel - 1) & 0x0F;
+    const noteOnStatus = 0x90 | channelOffset;
+    const noteOffStatus = 0x80 | channelOffset;
+
+    notes.forEach(noteStr => {
+      const midiNumber = Note.midi(noteStr);
+      if (midiNumber === null) return;
+      
+      if (this.activeMidiTimeouts.has(midiNumber)) {
+        clearTimeout(this.activeMidiTimeouts.get(midiNumber)!);
+      }
+      
+      try {
+        output.send([noteOnStatus, midiNumber, 100]);
+      } catch (e) {
+        console.warn('Failed to send MIDI Note On:', e);
+      }
+      
+      const timeout = setTimeout(() => {
+        try {
+          output.send([noteOffStatus, midiNumber, 0]);
+        } catch (e) {
+          // ignore
+        }
+        this.activeMidiTimeouts.delete(midiNumber);
+      }, durationMs);
+      
+      this.activeMidiTimeouts.set(midiNumber, timeout);
+    });
+  }
+
+  private onPadClicked(e: CustomEvent<any>) {
+    if (e.detail && e.detail.midiNote) {
+      this.sendMidiNotes([e.detail.midiNote], 350);
     }
   }
 
