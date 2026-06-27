@@ -14,10 +14,11 @@ import {
   buildCircuitGrid,
   normalizePitchClass,
   type GridConfig,
-  type ScaleMode,
   type VoicingMode,
 } from '../lib/music-grid';
 import { playChord, isAudioActive, startAudio, suspendAudio, registerAudioStateListener } from '../lib/audio';
+import { PatchData, decodePatchDump, createRequestDumpCommand, encodePatchDump, PATCH_BYTES } from '../lib/circuit-sysex';
+import './circuit-patch-editor';
 
 @customElement('circuit-chord-forge')
 export class CircuitChordForge extends LitElement {
@@ -1084,10 +1085,12 @@ export class CircuitChordForge extends LitElement {
   // === State Variables ===
   @state() private audioActive = false;
   private audioCleanup: (() => void) | null = null;
-  @state() private activeTab: 'grid' | 'data' | 'input' = 'grid';
+  @state() private activeTab: 'grid' | 'data' | 'input' | 'patch' = 'grid';
+  @state() private activePatch: PatchData | null = null;
   @state() private progression: ParsedChord[] = [];
   @state() private originalKey = 'C';
   @state() private activeIndex = 0;
+  @state() private hideScaleWarningForNotes = '';
   @state() private config: GridConfig = {
     key: 'C',
     scale: 'minor',
@@ -1107,6 +1110,10 @@ export class CircuitChordForge extends LitElement {
   @state() private selectedMidiChannel = 1;
   private midiAccess: any = null;
   private activeMidiTimeouts: Map<number, ReturnType<typeof setTimeout>> = new Map();
+
+  private get isCircuitTracksConnected() {
+    return this.midiConnected && !!this.activeMidiDevice && this.activeMidiDevice.toLowerCase().includes('circuit tracks');
+  }
 
   private toggleHelp() {
     this.showHelp = !this.showHelp;
@@ -1155,7 +1162,7 @@ export class CircuitChordForge extends LitElement {
 
   private initMidi() {
     if (typeof navigator !== 'undefined' && 'requestMIDIAccess' in navigator) {
-      (navigator as any).requestMIDIAccess()
+      (navigator as any).requestMIDIAccess({ sysex: true })
         .then((access: any) => {
           this.midiAccess = access;
           this.updateMidiStatus(access);
@@ -1215,6 +1222,81 @@ export class CircuitChordForge extends LitElement {
     if (this.selectedMidiDevice) {
       this.activeMidiDevice = this.selectedMidiDevice;
       this.midiConnected = true;
+      if (this.midiAccess) {
+        this.midiAccess.inputs.forEach((input: any) => {
+          if (input.name === this.activeMidiDevice) {
+            input.onmidimessage = this.handleMidiMessage.bind(this);
+          }
+        });
+      }
+    }
+  }
+
+  private handleMidiMessage(event: any) {
+    const data = event.data as Uint8Array;
+    if (data.length === PATCH_BYTES && data[0] === 0xF0) {
+      try {
+        this.activePatch = decodePatchDump(data);
+      } catch (err) {
+        console.warn("Failed to parse sysex patch dump", err);
+      }
+    }
+  }
+
+  private sendSysexCommand(data: Uint8Array) {
+    if (this.midiAccess && this.activeMidiDevice) {
+      this.midiAccess.outputs.forEach((output: any) => {
+        if (output.name === this.activeMidiDevice) {
+          output.send(data);
+        }
+      });
+    }
+  }
+
+  private handlePatchChange(e: CustomEvent) {
+    if (!this.activePatch) return;
+    const { path, value } = e.detail;
+    
+    // Deep clone patch data
+    const newPatch = { ...this.activePatch };
+    newPatch.oscillators = [{...newPatch.oscillators[0]}, {...newPatch.oscillators[1]}];
+    newPatch.filter = {...newPatch.filter};
+    newPatch.mixer = {...newPatch.mixer};
+    newPatch.envelopes = [{...newPatch.envelopes[0]}, {...newPatch.envelopes[1]}, {...newPatch.envelopes[2]}];
+
+    // Apply change using path
+    const parts = path.split('.');
+    let current: any = newPatch;
+    for (let i = 0; i < parts.length - 1; i++) {
+      current = current[parts[i]];
+    }
+    current[parts[parts.length - 1]] = value;
+
+    this.activePatch = newPatch;
+    
+    // Auto-sync to device
+    const sysex = encodePatchDump(newPatch);
+    this.sendSysexCommand(sysex);
+  }
+
+  private handleRequestDump() {
+    const cmd = createRequestDumpCommand(0);
+    this.sendSysexCommand(cmd);
+  }
+
+  private handleLoadSlot(e: CustomEvent) {
+    const slot = e.detail.slot;
+    if (this.midiAccess && this.activeMidiDevice) {
+      this.midiAccess.outputs.forEach((output: any) => {
+        if (output.name === this.activeMidiDevice) {
+          // Program Change on Channel 1 (0xC0), followed by patch number (0-63)
+          output.send([0xC0, slot]);
+        }
+      });
+      // Wait for Synth to load patch then request dump
+      setTimeout(() => {
+        this.handleRequestDump();
+      }, 50);
     }
   }
 
@@ -1313,6 +1395,14 @@ export class CircuitChordForge extends LitElement {
           <button class="nav-btn ${this.activeTab === 'input' ? 'active' : ''}" title="Chord Input" @click=${() => this.activeTab = 'input'}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
           </button>
+          <button 
+            class="nav-btn ${this.activeTab === 'patch' ? 'active' : ''}" 
+            title="Patch Editor" 
+            @click=${() => { if (this.isCircuitTracksConnected) this.activeTab = 'patch'; }}
+            style="opacity: ${this.isCircuitTracksConnected ? '1' : '0.3'}; cursor: ${this.isCircuitTracksConnected ? 'pointer' : 'not-allowed'};"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+          </button>
           <div class="nav-divider"></div>
           <div class="nav-bottom">
             <button class="nav-btn ${this.showHelp ? 'active' : ''}" title="Help ?" @click=${() => this.toggleHelp()}>
@@ -1354,14 +1444,26 @@ export class CircuitChordForge extends LitElement {
 
         <!-- 3. Center Main Content Area -->
         <main class="panel main-content">
-          ${missingNotes.length > 0 ? html`
-            <div class="scale-warning">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; flex-shrink: 0;">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                <line x1="12" y1="9" x2="12" y2="13"></line>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-              </svg>
-              <span>Chord note(s) (${missingNotes.join(', ')}) outside scale are hidden in Scale Collapse mode. Switch to Chromatic mode to play.</span>
+          ${missingNotes.length > 0 && this.hideScaleWarningForNotes !== missingNotes.join(',') ? html`
+            <div class="scale-warning" style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; flex-shrink: 0;">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <span>Chord note(s) (${missingNotes.join(', ')}) outside scale are hidden in Scale Collapse mode. Switch to Chromatic mode to play.</span>
+              </div>
+              <button 
+                @click=${() => this.hideScaleWarningForNotes = missingNotes.join(',')}
+                style="background: transparent; border: none; color: inherit; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;"
+                title="Dismiss"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </div>
           ` : null}
 
@@ -1448,6 +1550,17 @@ export class CircuitChordForge extends LitElement {
               <div class="chord-input-hint">Enter chords separated by spaces — e.g. <code>Cmaj7 Am7 Dm7 G7</code></div>
             </div>
             <chord-input .value=${this.source} @progression-parsed=${this.onParsed}></chord-input>
+          </div>
+
+          <!-- Tab 4: Patch Editor -->
+          <div class="patch-editor-view" style="display: ${this.activeTab === 'patch' ? 'block' : 'none'}; height: 100%;">
+            <circuit-patch-editor 
+              .patch=${this.activePatch} 
+              .midiConnected=${this.midiConnected}
+              @patch-change=${this.handlePatchChange}
+              @request-dump=${this.handleRequestDump}
+              @load-slot=${this.handleLoadSlot}
+            ></circuit-patch-editor>
           </div>
         </main>
 
