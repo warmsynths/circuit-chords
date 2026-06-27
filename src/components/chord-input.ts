@@ -160,6 +160,18 @@ export class ChordInput extends LitElement {
       opacity: 0.25;
       cursor: not-allowed;
     }
+
+    @media (max-width: 480px) {
+      .input-group {
+        flex-wrap: wrap;
+      }
+      .input-group input {
+        flex: 1 1 100%;
+      }
+      .input-group button, .input-group .btn-clear {
+        flex: 1;
+      }
+    }
   `;
 
   @property({ type: String })
