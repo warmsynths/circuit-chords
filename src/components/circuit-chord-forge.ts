@@ -1103,6 +1103,7 @@ export class CircuitChordForge extends LitElement {
   @state() private source = '';
   @state() private showSettings = false;
   @state() private showHelp = false;
+  @state() private showScaleWarnings = localStorage.getItem('circuit-chords.showScaleWarnings') !== 'false';
   @state() private midiConnected = false;
   @state() private midiDevices: string[] = [];
   @state() private selectedMidiDevice = '';
@@ -1127,6 +1128,11 @@ export class CircuitChordForge extends LitElement {
     if (this.showSettings) {
       this.showHelp = false;
     }
+  }
+
+  private toggleScaleWarnings(show: boolean) {
+    this.showScaleWarnings = show;
+    localStorage.setItem('circuit-chords.showScaleWarnings', String(show));
   }
 
   private async toggleAudio() {
@@ -1180,7 +1186,7 @@ export class CircuitChordForge extends LitElement {
 
   private updateMidiStatus(access: any) {
     const devices: string[] = [];
-    
+
     if (access && access.inputs) {
       access.inputs.forEach((input: any) => {
         if (input.state === 'connected') {
@@ -1199,7 +1205,7 @@ export class CircuitChordForge extends LitElement {
         }
       });
     }
-    
+
     this.midiDevices = devices;
 
     // Update selected MIDI device if not set or no longer available
@@ -1256,13 +1262,13 @@ export class CircuitChordForge extends LitElement {
   private handlePatchChange(e: CustomEvent) {
     if (!this.activePatch) return;
     const { path, value } = e.detail;
-    
+
     // Deep clone patch data
     const newPatch = { ...this.activePatch };
-    newPatch.oscillators = [{...newPatch.oscillators[0]}, {...newPatch.oscillators[1]}];
-    newPatch.filter = {...newPatch.filter};
-    newPatch.mixer = {...newPatch.mixer};
-    newPatch.envelopes = [{...newPatch.envelopes[0]}, {...newPatch.envelopes[1]}, {...newPatch.envelopes[2]}];
+    newPatch.oscillators = [{ ...newPatch.oscillators[0] }, { ...newPatch.oscillators[1] }];
+    newPatch.filter = { ...newPatch.filter };
+    newPatch.mixer = { ...newPatch.mixer };
+    newPatch.envelopes = [{ ...newPatch.envelopes[0] }, { ...newPatch.envelopes[1] }, { ...newPatch.envelopes[2] }];
 
     // Apply change using path
     const parts = path.split('.');
@@ -1273,7 +1279,7 @@ export class CircuitChordForge extends LitElement {
     current[parts[parts.length - 1]] = value;
 
     this.activePatch = newPatch;
-    
+
     // Auto-sync to device
     const sysex = encodePatchDump(newPatch);
     this.sendSysexCommand(sysex);
@@ -1379,7 +1385,7 @@ export class CircuitChordForge extends LitElement {
             </button>
             <div class="midi-led-group">
               <span class="midi-led ${this.midiConnected ? 'connected' : ''}"></span>
-              WebMIDI
+              MIDI
             </div>
           </div>
         </header>
@@ -1444,7 +1450,7 @@ export class CircuitChordForge extends LitElement {
 
         <!-- 3. Center Main Content Area -->
         <main class="panel main-content">
-          ${missingNotes.length > 0 && this.hideScaleWarningForNotes !== missingNotes.join(',') ? html`
+          ${missingNotes.length > 0 && this.showScaleWarnings && this.hideScaleWarningForNotes !== missingNotes.join(',') ? html`
             <div class="scale-warning" style="display: flex; align-items: center; justify-content: space-between;">
               <div style="display: flex; align-items: center;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; flex-shrink: 0;">
@@ -1454,16 +1460,22 @@ export class CircuitChordForge extends LitElement {
                 </svg>
                 <span>Chord note(s) (${missingNotes.join(', ')}) outside scale are hidden in Scale Collapse mode. Switch to Chromatic mode to play.</span>
               </div>
-              <button 
-                @click=${() => this.hideScaleWarningForNotes = missingNotes.join(',')}
-                style="background: transparent; border: none; color: inherit; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;"
-                title="Dismiss"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
+              <div style="display: flex; align-items: center;">
+                <label style="display: flex; align-items: center; cursor: pointer; font-size: 0.85rem; opacity: 0.8; margin-right: 12px; margin-bottom: 0;">
+                  <input type="checkbox" @change=${(e: Event) => this.toggleScaleWarnings(!(e.target as HTMLInputElement).checked)} style="margin-right: 6px; cursor: pointer;">
+                  Don't show again
+                </label>
+                <button 
+                  @click=${() => this.hideScaleWarningForNotes = missingNotes.join(',')}
+                  style="background: transparent; border: none; color: inherit; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;"
+                  title="Dismiss"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
             </div>
           ` : null}
 
@@ -1580,6 +1592,15 @@ export class CircuitChordForge extends LitElement {
           <!-- Sidebar Header -->
           <div class="sidebar-header" style="width: 100%; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 12px; margin-bottom: 8px;">
             <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #ffffff; letter-spacing: -0.02em;">Settings</h3>
+          </div>
+
+          <!-- General Settings -->
+          <div class="settings-section">
+            <h4 class="section-title">General</h4>
+            <label style="display: flex; align-items: center; cursor: pointer; color: #b0b3b8; font-size: 0.9rem;">
+              <input type="checkbox" .checked=${this.showScaleWarnings} @change=${(e: Event) => this.toggleScaleWarnings((e.target as HTMLInputElement).checked)} style="margin-right: 8px; cursor: pointer;">
+              Show warnings for out-of-scale notes
+            </label>
           </div>
 
           <!-- MIDI Settings -->
@@ -1753,17 +1774,17 @@ export class CircuitChordForge extends LitElement {
     notes.forEach(noteStr => {
       const midiNumber = Note.midi(noteStr);
       if (midiNumber === null) return;
-      
+
       if (this.activeMidiTimeouts.has(midiNumber)) {
         clearTimeout(this.activeMidiTimeouts.get(midiNumber)!);
       }
-      
+
       try {
         output.send([noteOnStatus, midiNumber, 100]);
       } catch (e) {
         console.warn('Failed to send MIDI Note On:', e);
       }
-      
+
       const timeout = setTimeout(() => {
         try {
           output.send([noteOffStatus, midiNumber, 0]);
@@ -1772,7 +1793,7 @@ export class CircuitChordForge extends LitElement {
         }
         this.activeMidiTimeouts.delete(midiNumber);
       }, durationMs);
-      
+
       this.activeMidiTimeouts.set(midiNumber, timeout);
     });
   }
@@ -1790,7 +1811,7 @@ export class CircuitChordForge extends LitElement {
   private onScaleChange(scale: string) {
     // 'chromatic' scale → chromatic keyboard layout mode.
     // Any other named scale → collapsed mode (only scale notes shown).
-    const mode: ScaleMode = scale === 'chromatic' ? 'chromatic' : 'collapsed';
+    const mode = scale === 'chromatic' ? 'chromatic' : 'collapsed';
     this.config = { ...this.config, scale, mode };
   }
 
@@ -1824,7 +1845,7 @@ export class CircuitChordForge extends LitElement {
     if (this.autoPlay && this.progression.length > 0) {
       setTimeout(() => this.playActiveVoicing(), 50);
     }
-    
+
     if (this.progression.length > 0) {
       this.activeTab = 'grid'; // Switch back to grid view so user sees pads
     }
