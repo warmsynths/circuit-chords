@@ -975,6 +975,58 @@ export class CircuitChordForge extends LitElement {
       font-weight: 500;
     }
 
+    /* Sidebar Human (Slide-out panel) */
+    .sidebar-human {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 400px;
+      max-width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      z-index: 1000;
+      background: var(--bg-charcoal-alpha);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-left: 1px solid var(--border-color);
+      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 1 !important;
+      pointer-events: none;
+    }
+
+    .sidebar-human.open {
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    /* Style integration for the human lit component */
+    human-panel {
+      --human-bg: transparent;
+      --human-surface: var(--bg-onyx);
+      --human-border: var(--border-color);
+      --human-text-primary: var(--text-primary);
+      --human-text-secondary: var(--text-secondary);
+      --human-accent: var(--accent-cyan);
+      --human-accent-hover: var(--accent-magenta);
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      background: transparent !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      flex-shrink: 0 !important;
+      height: auto !important;
+    }
+
     /* Responsive Media Queries */
     @media (max-width: 1024px) {
       :host {
@@ -1093,6 +1145,12 @@ export class CircuitChordForge extends LitElement {
         pointer-events: auto;
       }
 
+      /* Sidebar Human as Overlay Drawer on Mobile */
+      .sidebar-human {
+        width: 280px;
+        padding: 24px 20px;
+      }
+
       /* Reduce spacer elements in timeline footer on mobile */
       .footer-timeline {
         padding: 0 8px;
@@ -1193,6 +1251,9 @@ export class CircuitChordForge extends LitElement {
   @state() private source = '';
   @state() private showSettings = false;
   @state() private showHelp = false;
+  @state() private humanLoaded = false;
+  @state() private showHuman = false;
+  @state() private humanState: any = null;
   @state() private showScaleWarnings = localStorage.getItem('circuit-chords.showScaleWarnings') !== 'false';
   @state() private midiConnected = false;
   @state() private midiDevices: string[] = [];
@@ -1233,6 +1294,7 @@ export class CircuitChordForge extends LitElement {
     this.showHelp = !this.showHelp;
     if (this.showHelp) {
       this.showSettings = false;
+      this.showHuman = false;
     }
   }
 
@@ -1240,7 +1302,25 @@ export class CircuitChordForge extends LitElement {
     this.showSettings = !this.showSettings;
     if (this.showSettings) {
       this.showHelp = false;
+      this.showHuman = false;
     }
+  }
+
+  private toggleHuman() {
+    this.showHuman = !this.showHuman;
+    if (this.showHuman) {
+      this.showHelp = false;
+      this.showSettings = false;
+    }
+  }
+
+  private handleHumanChange(e: CustomEvent<any>) {
+    this.humanState = e.detail;
+  }
+
+  private handleHumanPreview(e: CustomEvent<any>) {
+    this.humanState = e.detail;
+    this.playActiveVoicing();
   }
 
   private toggleScaleWarnings(show: boolean) {
@@ -1273,6 +1353,22 @@ export class CircuitChordForge extends LitElement {
     }
     this.loadDefaultProgression();
     this.initMidi();
+
+    // Dynamically import the human-engine component
+    // Production: env var is set to CDN URL, loaded at runtime via @vite-ignore
+    // Development: env var is unset, Vite resolves 'human-engine' alias to local built file
+    const engineUrl = import.meta.env.VITE_HUMAN_ENGINE_URL;
+    const loadEngine = engineUrl
+      ? import(/* @vite-ignore */ engineUrl)
+      : import('human-engine');
+
+    loadEngine
+      .then(() => {
+        this.humanLoaded = true;
+      })
+      .catch((err) => {
+        console.warn('Could not load human panel:', err);
+      });
 
     // Apply the initial theme class to host
     this.classList.toggle('theme-light', this.theme === 'light');
@@ -1508,6 +1604,15 @@ export class CircuitChordForge extends LitElement {
                 </svg>
               `}
             </button>
+            <!-- Human toggle Button -->
+            ${this.humanLoaded ? html`
+              <button class="audio-btn ${this.showHuman ? 'active' : ''}" @click=${this.toggleHuman} title="Toggle Human Settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </button>
+            ` : null}
             <!-- Theme Toggle Button -->
             <button class="audio-btn theme-toggle-btn" @click=${this.toggleTheme} title="${this.theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}">
               ${this.theme === 'dark' ? html`
@@ -1724,7 +1829,28 @@ export class CircuitChordForge extends LitElement {
         </main>
 
         <!-- Sidebar Backdrop for Mobile overlay -->
-        <div class="sidebar-backdrop ${this.showSettings || this.showHelp ? 'open' : ''}" @click=${() => { this.showSettings = false; this.showHelp = false; }}></div>
+        <div class="sidebar-backdrop ${this.showSettings || this.showHelp || this.showHuman ? 'open' : ''}" @click=${() => { this.showSettings = false; this.showHelp = false; this.showHuman = false; }}></div>
+
+        <!-- Human Sidebar Panel -->
+        ${this.humanLoaded ? html`
+          <aside class="panel sidebar-human ${this.showHuman ? 'open' : ''}">
+            <!-- Close Button -->
+            <button class="close-btn" @click=${() => this.showHuman = false} title="Close Human">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+
+            <human-panel 
+              .heading=${"Human Settings"}
+              .hideInput=${true} 
+              .debugExpanded=${false}
+              @human-change=${this.handleHumanChange}
+              @human-preview=${this.handleHumanPreview}
+            ></human-panel>
+          </aside>
+        ` : null}
 
         <!-- 4. Right Sidebar (MIDI HUD / Modal on Desktop) -->
         <aside class="panel sidebar-right ${this.showSettings ? 'open' : ''}">
@@ -1897,12 +2023,12 @@ export class CircuitChordForge extends LitElement {
       .filter((note): note is string => Boolean(note));
 
     if (midiNotes.length > 0) {
-      playChord(midiNotes);
-      this.sendMidiNotes(midiNotes, 700);
+      playChord(midiNotes, 0.7, this.humanState);
+      this.sendMidiNotes(midiNotes, 700, this.humanState);
     }
   }
 
-  private sendMidiNotes(notes: string[], durationMs: number = 700) {
+  private sendMidiNotes(notes: string[], durationMs: number = 700, humanState?: any) {
     if (!this.midiConnected || !this.activeMidiDevice || !this.midiAccess) return;
 
     let output: any = null;
@@ -1918,7 +2044,7 @@ export class CircuitChordForge extends LitElement {
     const noteOnStatus = 0x90 | channelOffset;
     const noteOffStatus = 0x80 | channelOffset;
 
-    notes.forEach(noteStr => {
+    notes.forEach((noteStr, index) => {
       const midiNumber = Note.midi(noteStr);
       if (midiNumber === null) return;
 
@@ -1926,20 +2052,41 @@ export class CircuitChordForge extends LitElement {
         clearTimeout(this.activeMidiTimeouts.get(midiNumber)!);
       }
 
-      try {
-        output.send([noteOnStatus, midiNumber, 100]);
-      } catch (e) {
-        console.warn('Failed to send MIDI Note On:', e);
+      let velocity = 100;
+      let staggerMs = 0;
+      let noteDurationMs = durationMs;
+
+      if (humanState) {
+        const { minVelocity, maxVelocity, spread, microTiming, humanVariance, duration: hDuration } = humanState;
+
+        velocity = Math.round(minVelocity + Math.random() * (maxVelocity - minVelocity));
+
+        const spreadOffset = index * spread * 0.1;
+        const microTimingOffset = (Math.random() - 0.5) * microTiming * 0.05;
+        const varianceOffset = (Math.random() - 0.5) * humanVariance * 0.03;
+        staggerMs = Math.max(0, Math.round((spreadOffset + microTimingOffset + varianceOffset) * 1000));
+
+        noteDurationMs = Math.max(50, Math.round(hDuration * 1000 * (1.0 + (Math.random() - 0.5) * 0.2 * humanVariance)));
       }
 
       const timeout = setTimeout(() => {
         try {
-          output.send([noteOffStatus, midiNumber, 0]);
+          output.send([noteOnStatus, midiNumber, velocity]);
         } catch (e) {
-          // ignore
+          console.warn('Failed to send MIDI Note On:', e);
         }
-        this.activeMidiTimeouts.delete(midiNumber);
-      }, durationMs);
+
+        const offTimeout = setTimeout(() => {
+          try {
+            output.send([noteOffStatus, midiNumber, 0]);
+          } catch (e) {
+            // ignore
+          }
+          this.activeMidiTimeouts.delete(midiNumber);
+        }, noteDurationMs);
+
+        this.activeMidiTimeouts.set(midiNumber, offTimeout);
+      }, staggerMs);
 
       this.activeMidiTimeouts.set(midiNumber, timeout);
     });

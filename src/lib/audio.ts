@@ -69,17 +69,43 @@ export function playNote(noteName: string, duration = 0.35): void {
  * @param noteNames Array of note names with octaves.
  * @param duration Duration in seconds.
  */
-export function playChord(noteNames: string[], duration = 0.7): void {
+export function playChord(noteNames: string[], duration = 0.7, humanState?: any): void {
   if (Tone.context.state !== 'running') {
     console.warn("Audio playback skipped: AudioContext is suspended. Click the audio icon in the header to enable.");
     return;
   }
   try {
-    // Scale velocity down as note count grows to pre-empt loudness buildup.
-    // Capped at a floor of 0.4 so chords never sound too quiet.
     const count = noteNames.length;
-    const velocity = count <= 1 ? 1 : Math.max(0.4, 1 / Math.sqrt(count));
-    sampler.triggerAttackRelease(noteNames, duration, Tone.now(), velocity);
+    const densityScaling = count <= 1 ? 1 : Math.max(0.4, 1 / Math.sqrt(count));
+    const now = Tone.now();
+
+    noteNames.forEach((noteName, index) => {
+      let stagger = 0;
+      let vel = 1.0;
+      let dur = duration;
+
+      if (humanState) {
+        const { minVelocity, maxVelocity, spread, microTiming, humanVariance, duration: hDuration } = humanState;
+        
+        // Random velocity between minVelocity and maxVelocity (0 to 127) scaled to 0-1 range
+        const rawVel = (minVelocity + Math.random() * (maxVelocity - minVelocity)) / 127;
+        vel = rawVel * densityScaling;
+
+        // Spread/microtiming/variance offset in seconds
+        const spreadOffset = index * spread * 0.1;
+        const microTimingOffset = (Math.random() - 0.5) * microTiming * 0.05;
+        const varianceOffset = (Math.random() - 0.5) * humanVariance * 0.03;
+        
+        stagger = Math.max(0, spreadOffset + microTimingOffset + varianceOffset);
+        
+        // Calculate duration scaled by human settings duration and randomized by humanVariance
+        dur = hDuration * (1.0 + (Math.random() - 0.5) * 0.2 * humanVariance);
+      } else {
+        vel = densityScaling;
+      }
+
+      sampler.triggerAttackRelease(noteName, dur, now + stagger, vel);
+    });
   } catch (e) {
     console.warn("Audio playback failed:", e);
   }
