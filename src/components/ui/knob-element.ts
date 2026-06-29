@@ -18,9 +18,9 @@ export class KnobElement extends LitElement {
       flex-direction: column;
       align-items: center;
       user-select: none;
-      --knob-color: #22d3ee;
-      --knob-bg: #1e293b;
-      --knob-track: #334155;
+      --knob-color: var(--accent-cyan, #22d3ee);
+      --knob-bg: var(--pad-scale, #1e293b);
+      --knob-track: var(--pad-chromatic, #334155);
     }
 
     .knob-container {
@@ -29,9 +29,8 @@ export class KnobElement extends LitElement {
       height: 60px;
       cursor: ns-resize;
       border-radius: 50%;
-      background: linear-gradient(145deg, #1e293b, #0f172a);
-      box-shadow:  5px 5px 10px #0c1222,
-                  -5px -5px 10px #202e46;
+      background: var(--bg-charcoal, linear-gradient(145deg, #1e293b, #0f172a));
+      box-shadow: var(--knob-shadow, 5px 5px 10px #0c1222, -5px -5px 10px #202e46);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -40,14 +39,12 @@ export class KnobElement extends LitElement {
     }
 
     .knob-container:hover {
-      box-shadow:  3px 3px 6px #0c1222,
-                  -3px -3px 6px #202e46;
+      box-shadow: var(--knob-shadow-hover, 3px 3px 6px #0c1222, -3px -3px 6px #202e46);
     }
 
     .knob-container.dragging {
       transform: scale(0.98);
-      box-shadow: inset 3px 3px 6px #0c1222,
-                  inset -3px -3px 6px #202e46;
+      box-shadow: var(--knob-shadow-dragging, inset 3px 3px 6px #0c1222, inset -3px -3px 6px #202e46);
     }
 
     .knob-svg {
@@ -88,7 +85,7 @@ export class KnobElement extends LitElement {
       position: absolute;
       width: 4px;
       height: 12px;
-      background-color: #e2e8f0;
+      background-color: var(--text-secondary, #e2e8f0);
       border-radius: 2px;
       top: 10px;
       left: 50%;
@@ -99,7 +96,7 @@ export class KnobElement extends LitElement {
     .label {
       margin-top: 8px;
       font-size: 0.75rem;
-      color: #94a3b8;
+      color: var(--text-secondary, #94a3b8);
       font-weight: 500;
       letter-spacing: 0.5px;
       text-transform: uppercase;

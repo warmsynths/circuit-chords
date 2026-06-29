@@ -26,8 +26,8 @@ export class ProgressionStepper extends LitElement {
 
     .step-block {
       flex: 1;
-      background: var(--bg-onyx, #121316);
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: var(--pad-scale);
+      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
       border-radius: 6px;
       display: flex;
       flex-direction: column;
@@ -35,22 +35,21 @@ export class ProgressionStepper extends LitElement {
       justify-content: center;
       font-size: 0.75rem;
       font-weight: 700;
-      color: #555;
+      color: var(--btn-text-off, #94a3b8);
       cursor: pointer;
       transition: all 0.15s;
       overflow: hidden;
     }
 
     .step-block:hover {
-      background: var(--pad-chromatic, #222328);
-      color: #888;
+      border-color: var(--btn-text-off);
+      color: var(--text-primary);
     }
 
     .step-block.active {
       border-color: var(--accent-magenta, #ff2a9f);
       color: var(--accent-magenta, #ff2a9f);
-      background: rgba(255, 42, 159, 0.1);
-      box-shadow: 0 0 12px rgba(255, 42, 159, 0.2);
+      background: var(--pad-scale);
     }
 
     .step-index {

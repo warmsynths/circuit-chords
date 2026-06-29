@@ -18,9 +18,9 @@ export class SliderElement extends LitElement {
       flex-direction: column;
       align-items: center;
       user-select: none;
-      --slider-color: #22d3ee;
-      --slider-bg: #1e293b;
-      --slider-track: #0f172a;
+      --slider-color: var(--accent-cyan, #22d3ee);
+      --slider-bg: var(--pad-scale, #1e293b);
+      --slider-track: var(--pad-chromatic, #0f172a);
     }
 
     .slider-container {
@@ -28,7 +28,7 @@ export class SliderElement extends LitElement {
       background: var(--slider-track);
       border-radius: 8px;
       cursor: pointer;
-      box-shadow: inset 2px 2px 5px #0c1222, inset -2px -2px 5px #202e46;
+      box-shadow: var(--shadow-inset, inset 2px 2px 5px #0c1222, inset -2px -2px 5px #202e46);
       touch-action: none;
     }
 
@@ -65,7 +65,7 @@ export class SliderElement extends LitElement {
 
     .slider-thumb {
       position: absolute;
-      background: #e2e8f0;
+      background: var(--text-secondary, #e2e8f0);
       border-radius: 4px;
       box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
       pointer-events: none;
@@ -88,7 +88,7 @@ export class SliderElement extends LitElement {
     .label {
       margin-top: 8px;
       font-size: 0.75rem;
-      color: #94a3b8;
+      color: var(--text-secondary, #94a3b8);
       font-weight: 500;
       letter-spacing: 0.5px;
       text-transform: uppercase;

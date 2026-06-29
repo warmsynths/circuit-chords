@@ -41,7 +41,7 @@ export class ChordInput extends LitElement {
   static styles = css`
     :host {
       display: block;
-      color: #ffffff;
+      color: var(--text-primary, #ffffff);
       width: 100%;
     }
 
@@ -55,7 +55,7 @@ export class ChordInput extends LitElement {
       font-family: 'Space Grotesk', sans-serif;
       font-size: 0.75rem;
       font-weight: 700;
-      color: #888888;
+      color: var(--text-secondary, #888888);
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
@@ -68,14 +68,14 @@ export class ChordInput extends LitElement {
 
     input {
       flex: 1;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
       border-radius: 8px;
       padding: 12px 16px;
       font: inherit;
       font-size: 0.95rem;
       outline: none;
-      background: #121316;
-      color: #ffffff;
+      background: var(--input-bg, #121316);
+      color: var(--input-color, #ffffff);
       transition: all 150ms ease;
     }
 
@@ -91,20 +91,20 @@ export class ChordInput extends LitElement {
       font: inherit;
       font-weight: 700;
       background: var(--accent-magenta, #ff2a9f);
-      color: #ffffff;
+      color: var(--text-on-accent, #ffffff);
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(255, 42, 159, 0.2);
+      box-shadow: 0 4px 12px var(--accent-magenta-alpha, rgba(255, 42, 159, 0.2));
       transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     button:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(255, 42, 159, 0.3);
+      box-shadow: 0 6px 16px var(--accent-magenta-alpha, rgba(255, 42, 159, 0.3));
     }
 
     button:active:not(:disabled) {
       transform: translateY(1px);
-      box-shadow: 0 2px 4px rgba(255, 42, 159, 0.2);
+      box-shadow: 0 2px 4px var(--accent-magenta-alpha, rgba(255, 42, 159, 0.2));
     }
 
     button:disabled {
@@ -115,7 +115,7 @@ export class ChordInput extends LitElement {
 
     .hint {
       font-size: 0.75rem;
-      color: #666666;
+      color: var(--text-secondary, #666666);
       margin-top: 2px;
       line-height: 1.4;
     }
@@ -131,13 +131,13 @@ export class ChordInput extends LitElement {
     }
 
     .btn-clear {
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
       border-radius: 8px;
       padding: 12px 18px;
       font: inherit;
       font-weight: 700;
       background: transparent;
-      color: #666;
+      color: var(--btn-text-off, #666);
       cursor: pointer;
       box-shadow: none;
       transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -146,8 +146,8 @@ export class ChordInput extends LitElement {
 
     .btn-clear:hover:not(:disabled) {
       background: rgba(255, 255, 255, 0.05);
-      border-color: rgba(255, 255, 255, 0.2);
-      color: #ccc;
+      border-color: var(--text-secondary);
+      color: var(--text-primary);
       transform: none;
       box-shadow: none;
     }

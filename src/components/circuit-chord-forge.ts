@@ -25,16 +25,54 @@ export class CircuitChordForge extends LitElement {
   static styles = css`
     :host {
       /* 1. DESIGN THEME & COLOR PALETTE */
+      /* Default Dark Mode (Circuit Tracks) */
       --bg-onyx: #121316;
       --bg-charcoal: #1a1b20;
+      --bg-charcoal-alpha: rgba(26, 27, 32, 0.85);
       --radius-panel: 12px;
+      
+      --text-primary: #ffffff;
+      --text-secondary: #888888;
+      --text-muted: #555555;
+      --text-on-accent: #ffffff;
       
       --pad-scale: #2c3a4e;
       --pad-chromatic: #222328;
       
       --accent-cyan: #00f0ff;
+      --accent-cyan-text: #121316;
+      --accent-cyan-alpha: rgba(0, 240, 255, 0.3);
       --accent-magenta: #ff2a9f;
+      --accent-magenta-alpha: rgba(255, 42, 159, 0.1);
       --status-green: #39ff14;
+
+      --pad-top-dim: #132230;
+      --pad-top-text-dim: #264660;
+      --pad-top-scale: #1a3246;
+      --pad-top-text-scale: #62a2d4;
+      --pad-bot-dim: #221222;
+      --pad-bot-text-dim: #4d234d;
+      --pad-bot-scale: #331833;
+      --pad-bot-text-scale: #9c5c9c;
+      
+      --border-color: rgba(255, 255, 255, 0.05);
+      --shadow-panel: 0 4px 24px rgba(0, 0, 0, 0.2);
+      --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+      --pad-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.04), 0 3px 6px rgba(0, 0, 0, 0.4);
+      --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+      --midi-led-off: #444444;
+      --midi-svg-stroke-off: #333333;
+      
+      --brand-logo-bg: #ffffff;
+      --brand-logo-fill: #1a1b20;
+
+      --knob-shadow: 5px 5px 10px #0c1222, -5px -5px 10px #202e46;
+      --knob-shadow-hover: 3px 3px 6px #0c1222, -3px -3px 6px #202e46;
+      --knob-shadow-dragging: inset 3px 3px 6px #0c1222, inset -3px -3px 6px #202e46;
+
+      --input-bg: #121316;
+      --input-color: #ffffff;
+      --btn-text-off: #888888;
 
       /* Structural sizing */
       --sidebar-left-width: 72px;
@@ -48,10 +86,63 @@ export class CircuitChordForge extends LitElement {
       height: 100dvh;
       overflow: hidden;
       background-color: var(--bg-onyx);
-      color: #ffffff;
+      color: var(--text-primary);
       font-family: 'Space Grotesk', system-ui, sans-serif;
       padding: var(--gap);
       box-sizing: border-box;
+    }
+
+    :host(.theme-light) {
+      /* Light/Medium Mode (Circuit Rhythm) */
+      --bg-onyx: #5c5f66;          /* Darker slate grey chassis edges */
+      --bg-charcoal: #82858d;      /* Medium slate grey faceplate */
+      --bg-charcoal-alpha: rgba(130, 133, 141, 0.85);
+      
+      --text-primary: #121316;     /* Black printed text */
+      --text-secondary: #2e3035;   /* Dark gray labels */
+      --text-muted: #4a4d53;       /* Muted gray */
+      --text-on-accent: #ffffff;
+      
+      --pad-scale: #2e313a;        /* Dark charcoal pads off state */
+      --pad-chromatic: #1c1e24;    /* Darkest gap pads off state */
+      
+      --accent-cyan: #ff5c12;      /* Glowing Orange pads */
+      --accent-cyan-text: #ffffff;
+      --accent-cyan-alpha: rgba(255, 92, 18, 0.3);
+      --accent-magenta: #00d2ff;   /* Glowing Cyan/Teal pads */
+      --accent-magenta-alpha: rgba(0, 210, 255, 0.25);
+      --status-green: #10b981;     /* Play button Green */
+
+      --pad-top-dim: #12242e;
+      --pad-top-text-dim: #254b5f;
+      --pad-top-scale: #17384a;
+      --pad-top-text-scale: #5eaad1;
+      --pad-bot-dim: #2a1610;
+      --pad-bot-text-dim: #5c3021;
+      --pad-bot-scale: #3f1e13;
+      --pad-bot-text-scale: #b55d3c;
+      
+      --border-color: rgba(0, 0, 0, 0.15);
+      --shadow-panel: 0 4px 24px rgba(0, 0, 0, 0.15);
+      --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+      --pad-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.15), 0 3px 6px rgba(0, 0, 0, 0.25);
+      --scrollbar-thumb: rgba(0, 0, 0, 0.25);
+      --midi-led-off: #4a4d53;
+      --midi-svg-stroke-off: #4a4d53;
+      
+      --brand-logo-bg: #121316;
+      --brand-logo-fill: #82858d;
+
+      --knob-shadow: 4px 4px 8px rgba(0, 0, 0, 0.25), -4px -4px 8px rgba(255, 255, 255, 0.2);
+      --knob-shadow-hover: 2px 2px 5px rgba(0, 0, 0, 0.25), -2px -2px 5px rgba(255, 255, 255, 0.2);
+      --knob-shadow-dragging: inset 2px 2px 5px rgba(0, 0, 0, 0.25), inset -2px -2px 5px rgba(255, 255, 255, 0.2);
+
+      --input-bg: #ffffff;         /* Crisp white input background */
+      --input-color: #121316;      /* Black text in input */
+      --btn-text-off: #cbd5e1;
+
+      color: var(--text-primary);
+      background-color: var(--bg-onyx);
     }
 
     * {
@@ -67,7 +158,7 @@ export class CircuitChordForge extends LitElement {
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.1);
+      background: var(--scrollbar-thumb);
       border-radius: 2px;
     }
     ::-webkit-scrollbar-thumb:hover {
@@ -89,8 +180,8 @@ export class CircuitChordForge extends LitElement {
     .panel {
       background-color: var(--bg-charcoal);
       border-radius: var(--radius-panel);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-panel);
     }
 
     /* Brand Header Bar */
@@ -104,8 +195,8 @@ export class CircuitChordForge extends LitElement {
       padding: 0 16px;
       background: var(--bg-charcoal);
       border-radius: var(--radius-panel);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-panel);
     }
 
     .brand-left {
@@ -126,7 +217,7 @@ export class CircuitChordForge extends LitElement {
       font-weight: 800;
       letter-spacing: -0.04em;
       text-transform: lowercase;
-      color: #ffffff;
+      color: var(--text-primary);
       line-height: 1;
     }
 
@@ -144,14 +235,14 @@ export class CircuitChordForge extends LitElement {
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: #888;
+      color: var(--text-secondary);
     }
 
     .midi-led {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #444;
+      background: var(--midi-led-off);
       transition: all 0.3s ease;
     }
 
@@ -164,9 +255,9 @@ export class CircuitChordForge extends LitElement {
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      background: var(--bg-onyx);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      color: #666;
+      background: var(--pad-scale);
+      border: 1px solid var(--border-color);
+      color: var(--btn-text-off, #94a3b8);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -177,12 +268,10 @@ export class CircuitChordForge extends LitElement {
     .audio-btn:hover {
       color: var(--accent-cyan);
       border-color: var(--accent-cyan);
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
     }
     .audio-btn.active {
-      color: var(--status-green);
-      border-color: var(--status-green);
-      box-shadow: 0 0 10px rgba(57, 255, 22, 0.2);
+      color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
     }
     .audio-btn svg {
       width: 16px;
@@ -209,9 +298,9 @@ export class CircuitChordForge extends LitElement {
       width: 44px;
       height: 44px;
       border-radius: 8px;
-      background: var(--bg-onyx);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      color: #666;
+      background: var(--pad-scale);
+      border: 1px solid var(--border-color);
+      color: var(--btn-text-off, #94a3b8);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -222,13 +311,12 @@ export class CircuitChordForge extends LitElement {
     .nav-btn:hover, .nav-btn.active {
       color: var(--accent-cyan);
       border-color: var(--accent-cyan);
-      box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
     }
 
     .nav-divider {
       width: 32px;
       height: 2px;
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--border-color);
       margin: 8px 0;
       border-radius: 2px;
     }
@@ -261,7 +349,7 @@ export class CircuitChordForge extends LitElement {
       font-size: 0.65rem;
       font-weight: 700;
       letter-spacing: 0.15em;
-      color: #888;
+      color: var(--text-secondary);
       text-transform: uppercase;
       white-space: nowrap;
     }
@@ -272,15 +360,15 @@ export class CircuitChordForge extends LitElement {
       background: var(--bg-onyx);
       padding: 4px;
       border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-inset);
     }
 
     .tactile-btn {
       padding: 6px 11px;
       border-radius: 6px;
       background: var(--pad-chromatic);
-      color: #888;
+      color: var(--btn-text-off, #94a3b8);
       border: none;
       font-weight: 700;
       font-size: 0.8rem;
@@ -291,19 +379,19 @@ export class CircuitChordForge extends LitElement {
     }
     .tactile-btn:hover {
       background: var(--pad-scale);
-      color: white;
+      color: var(--text-primary);
     }
     .tactile-btn.active-root {
       background: var(--accent-cyan);
-      color: var(--bg-onyx);
-      box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+      color: var(--accent-cyan-text);
+      box-shadow: 0 0 12px var(--accent-cyan-alpha, rgba(0, 240, 255, 0.2));
     }
 
     .header-select {
       background: var(--bg-onyx) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2300f0ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='4 6 8 10 12 6'></polyline></svg>") no-repeat right 12px center;
       background-size: 12px;
-      color: white;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
       padding: 6px 32px 6px 16px;
       border-radius: 6px;
       font-weight: 700;
@@ -314,12 +402,12 @@ export class CircuitChordForge extends LitElement {
       appearance: none;
       -webkit-appearance: none;
       min-width: 150px;
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+      box-shadow: var(--shadow-inset);
       transition: all 0.2s;
     }
     .header-select:focus {
       border-color: var(--accent-cyan);
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.5), 0 0 8px rgba(0, 240, 255, 0.25);
+      box-shadow: var(--shadow-inset), 0 0 8px rgba(0, 240, 255, 0.25);
     }
     .header-select:hover {
       border-color: rgba(255, 255, 255, 0.2);
@@ -377,12 +465,12 @@ export class CircuitChordForge extends LitElement {
       font-size: 1.1rem;
       font-weight: 800;
       letter-spacing: -0.02em;
-      color: #ffffff;
+      color: var(--text-primary);
     }
 
     .chord-input-hint {
       font-size: 0.78rem;
-      color: #666;
+      color: var(--text-secondary);
       line-height: 1.5;
     }
 
@@ -413,7 +501,7 @@ export class CircuitChordForge extends LitElement {
       font-size: 0.58rem;
       font-weight: 700;
       letter-spacing: 0.2em;
-      color: #555;
+      color: var(--text-muted);
       text-transform: uppercase;
       padding: 0 2px;
       margin-bottom: 2px;
@@ -426,7 +514,7 @@ export class CircuitChordForge extends LitElement {
       gap: 5px;
       padding: 10px;
       background: rgba(255,255,255,0.02);
-      border: 1px solid rgba(255,255,255,0.05);
+      border: 1px solid var(--border-color);
       border-radius: 10px;
     }
 
@@ -440,7 +528,7 @@ export class CircuitChordForge extends LitElement {
     .picker-pad {
       aspect-ratio: 1;
       border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
       cursor: pointer;
       display: grid;
       place-items: center;
@@ -454,7 +542,7 @@ export class CircuitChordForge extends LitElement {
       position: relative;
       user-select: none;
       outline: none;
-      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.04), 0 3px 6px rgba(0, 0, 0, 0.4);
+      box-shadow: var(--pad-shadow);
     }
     .picker-pad:active {
       transform: scale(0.93);
@@ -463,25 +551,25 @@ export class CircuitChordForge extends LitElement {
     /* ── Note pads — dark "off" state, cyan when selected ── */
     .picker-pad.pad-root {
       background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 100%), var(--pad-scale);
-      color: #ccc;
-      border-color: rgba(255, 255, 255, 0.05);
+      color: var(--btn-text-off, #94a3b8);
+      border-color: var(--border-color);
     }
     .picker-pad.pad-root:hover {
-      border-color: rgba(255, 255, 255, 0.2);
-      color: #fff;
+      border-color: var(--btn-text-off);
+      color: var(--text-primary);
     }
     .picker-pad.pad-root.pad-active {
       background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%), var(--accent-cyan);
-      color: #121316;
+      color: var(--accent-cyan-text);
       border-color: rgba(255, 255, 255, 0.3);
-      box-shadow: 0 0 18px rgba(0, 240, 255, 0.55), inset 0 2px 4px rgba(255,255,255,0.4);
+      box-shadow: 0 0 18px var(--accent-cyan-alpha, rgba(0, 240, 255, 0.55)), var(--shadow-inset);
     }
     /* Dimmed/spacer pads for gap positions */
     .picker-pad.pad-root.pad-dim {
       background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 100%), var(--pad-chromatic);
-      color: #333;
-      border-color: rgba(255,255,255,0.03);
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+      color: var(--text-muted);
+      border-color: var(--border-color);
+      box-shadow: var(--shadow-inset);
       cursor: default;
       pointer-events: none;
     }
@@ -489,19 +577,19 @@ export class CircuitChordForge extends LitElement {
     /* ── Scale pads — dark "off" state, magenta when selected ── */
     .picker-pad.pad-scale {
       background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 100%), var(--pad-scale);
-      color: #ccc;
-      border-color: rgba(255, 255, 255, 0.05);
+      color: var(--btn-text-off, #94a3b8);
+      border-color: var(--border-color);
       font-size: 0.58rem;
     }
     .picker-pad.pad-scale:hover {
-      border-color: rgba(255, 255, 255, 0.2);
-      color: #fff;
+      border-color: var(--btn-text-off);
+      color: var(--text-primary);
     }
     .picker-pad.pad-scale.pad-active {
       background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%), var(--accent-magenta);
-      color: #fff;
+      color: var(--text-on-accent);
       border-color: rgba(255, 255, 255, 0.25);
-      box-shadow: 0 0 20px rgba(255, 42, 159, 0.65), inset 0 2px 4px rgba(255,255,255,0.3);
+      box-shadow: 0 0 20px var(--accent-magenta-alpha, rgba(255, 42, 159, 0.65)), var(--shadow-inset);
     }
 
     /* Section 4: Right Sidebar (MIDI HUD / Modal on Desktop) */
@@ -515,10 +603,10 @@ export class CircuitChordForge extends LitElement {
       height: auto;
       max-height: 85vh;
       z-index: 1000;
-      background: rgba(26, 27, 32, 0.85);
+      background: var(--bg-charcoal-alpha);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
       border-radius: 16px;
       box-shadow: 0 24px 48px rgba(0, 0, 0, 0.8),
                   inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -555,10 +643,10 @@ export class CircuitChordForge extends LitElement {
       height: auto;
       max-height: 85vh;
       z-index: 1000;
-      background: rgba(26, 27, 32, 0.85);
+      background: var(--bg-charcoal-alpha);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
       border-radius: 16px;
       box-shadow: 0 24px 48px rgba(0, 0, 0, 0.8),
                   inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -587,7 +675,7 @@ export class CircuitChordForge extends LitElement {
     /* Help specific contents formatting */
     .help-section {
       width: 100%;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid var(--border-color);
       padding-bottom: 16px;
     }
     .help-section:last-of-type {
@@ -605,7 +693,7 @@ export class CircuitChordForge extends LitElement {
     .help-text {
       font-size: 0.85rem;
       line-height: 1.5;
-      color: #ccc;
+      color: var(--text-secondary);
       margin: 0;
     }
     .help-list {
@@ -619,11 +707,11 @@ export class CircuitChordForge extends LitElement {
     .help-list li {
       font-size: 0.8rem;
       line-height: 1.4;
-      color: #bbb;
+      color: var(--text-muted);
       position: relative;
     }
     .help-list li strong {
-      color: #fff;
+      color: var(--text-primary);
     }
     .help-step-number {
       display: inline-flex;
@@ -654,21 +742,21 @@ export class CircuitChordForge extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 2px solid #222328;
-      box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+      border: 2px solid var(--border-color);
+      box-shadow: var(--shadow-inset);
       transition: all 0.3s;
     }
 
     .midi-icon-wrapper.connected {
       border-color: var(--status-green);
-      box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8), 0 0 16px rgba(57, 255, 20, 0.3);
+      box-shadow: var(--shadow-inset), 0 0 16px rgba(57, 255, 20, 0.3);
     }
 
     .midi-svg {
       width: 42px;
       height: 42px;
       fill: none;
-      stroke: #333;
+      stroke: var(--midi-svg-stroke-off);
       stroke-width: 2.5;
       stroke-linecap: round;
       stroke-linejoin: round;
@@ -683,7 +771,7 @@ export class CircuitChordForge extends LitElement {
       font-size: 0.75rem;
       font-weight: 800;
       letter-spacing: 0.15em;
-      color: #666;
+      color: var(--text-muted);
       transition: all 0.3s ease;
     }
 
@@ -703,8 +791,8 @@ export class CircuitChordForge extends LitElement {
       width: 100%;
       background: var(--bg-onyx) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2300f0ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='4 6 8 10 12 6'></polyline></svg>") no-repeat right 16px center;
       background-size: 14px;
-      color: white;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
       padding: 10px 36px 10px 16px;
       border-radius: 8px;
       font-size: 0.85rem;
@@ -714,12 +802,12 @@ export class CircuitChordForge extends LitElement {
       -webkit-appearance: none;
       cursor: pointer;
       outline: none;
-      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+      box-shadow: var(--shadow-inset);
       transition: all 0.2s;
     }
     .midi-select:focus {
       border-color: var(--accent-cyan);
-      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 8px rgba(0, 240, 255, 0.25);
+      box-shadow: var(--shadow-inset), 0 0 8px rgba(0, 240, 255, 0.25);
     }
     .midi-select:hover {
       border-color: rgba(255, 255, 255, 0.2);
@@ -741,7 +829,7 @@ export class CircuitChordForge extends LitElement {
       text-transform: uppercase;
       color: var(--accent-cyan);
       opacity: 0.8;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid var(--border-color);
       padding-bottom: 6px;
     }
 
@@ -756,7 +844,7 @@ export class CircuitChordForge extends LitElement {
     .active-device-name {
       font-size: 0.75rem;
       font-weight: 600;
-      color: #aaa;
+      color: var(--text-secondary);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -772,14 +860,14 @@ export class CircuitChordForge extends LitElement {
       cursor: pointer;
       font-family: inherit;
       transition: all 0.2s;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
       outline: none;
     }
     
     .midi-btn.connect {
       background: var(--accent-cyan);
-      color: var(--bg-charcoal);
+      color: var(--accent-cyan-text);
       border-color: var(--accent-cyan);
     }
     .midi-btn.connect:hover {
@@ -787,33 +875,34 @@ export class CircuitChordForge extends LitElement {
       box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
     }
     .midi-btn.connect:disabled {
-      background: #222;
-      color: #555;
-      border-color: #333;
+      background: var(--pad-scale);
+      color: var(--text-muted);
+      border-color: var(--border-color);
       cursor: not-allowed;
       box-shadow: none;
+      opacity: 0.5;
     }
     
     .midi-btn.disconnect {
-      background: #251216;
+      background: var(--pad-chromatic);
       color: var(--accent-magenta);
-      border-color: rgba(255, 0, 127, 0.3);
+      border-color: var(--border-color);
     }
     .midi-btn.disconnect:hover {
-      background: #3a151b;
+      background: var(--pad-scale);
       border-color: var(--accent-magenta);
-      box-shadow: 0 0 12px rgba(255, 0, 127, 0.2);
+      box-shadow: 0 0 12px var(--accent-magenta-alpha);
     }
 
     .no-devices-msg {
       font-size: 0.75rem;
-      color: #666;
+      color: var(--text-secondary);
       font-style: italic;
       text-align: center;
       padding: 12px;
       background: var(--bg-onyx);
       border-radius: 8px;
-      border: 1px dashed rgba(255, 255, 255, 0.05);
+      border: 1px dashed var(--border-color);
     }
 
     /* Section 5: Bottom Timeline Footer */
@@ -837,18 +926,18 @@ export class CircuitChordForge extends LitElement {
       position: absolute;
       top: 16px;
       right: 16px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--bg-onyx);
+      border: 1px solid var(--border-color);
       border-radius: 50%;
       width: 32px;
       height: 32px;
-      color: #888;
+      color: var(--text-secondary);
       cursor: pointer;
       z-index: 1010;
       transition: all 0.2s ease;
     }
     .close-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: var(--pad-scale);
       border-color: var(--accent-cyan);
       color: var(--accent-cyan);
     }
@@ -1083,6 +1172,7 @@ export class CircuitChordForge extends LitElement {
   `;
 
   // === State Variables ===
+  @state() private theme: 'dark' | 'light' = (localStorage.getItem('circuit-chords.theme') as 'dark' | 'light') || 'dark';
   @state() private audioActive = false;
   private audioCleanup: (() => void) | null = null;
   @state() private activeTab: 'grid' | 'data' | 'input' | 'patch' = 'grid';
@@ -1112,9 +1202,32 @@ export class CircuitChordForge extends LitElement {
   private midiAccess: any = null;
   private activeMidiTimeouts: Map<number, ReturnType<typeof setTimeout>> = new Map();
 
+  private get isDebugMode() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.has('debug');
+  }
+
   private get isCircuitTracksConnected() {
+    if (this.isDebugMode) return true;
     return this.midiConnected && !!this.activeMidiDevice && this.activeMidiDevice.toLowerCase().includes('circuit tracks');
   }
+
+  private getOrCreateMockPatch(): PatchData {
+    const data = new Uint8Array(PATCH_BYTES);
+    data[45] = 1;
+    data[46] = 0;
+    data[64] = 64;
+    data[70] = 1;
+    data[71] = 64;
+    data[73] = 64;
+    data[79] = 10;
+    data[80] = 50;
+    data[81] = 64;
+    data[82] = 20;
+    return decodePatchDump(data);
+  }
+
+
 
   private toggleHelp() {
     this.showHelp = !this.showHelp;
@@ -1147,10 +1260,22 @@ export class CircuitChordForge extends LitElement {
     }
   }
 
+  private toggleTheme() {
+    this.theme = this.theme === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('circuit-chords.theme', this.theme);
+    this.classList.toggle('theme-light', this.theme === 'light');
+  }
+
   connectedCallback() {
     super.connectedCallback();
+    if (this.isDebugMode) {
+      this.activePatch = this.getOrCreateMockPatch();
+    }
     this.loadDefaultProgression();
     this.initMidi();
+
+    // Apply the initial theme class to host
+    this.classList.toggle('theme-light', this.theme === 'light');
 
     // Initialize audio state and register state change listener
     this.audioActive = isAudioActive();
@@ -1358,8 +1483,8 @@ export class CircuitChordForge extends LitElement {
         <header class="brand-header">
           <div class="brand-left">
             <svg class="brand-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="32" height="32" rx="6" fill="#ffffff" />
-              <g transform="rotate(-45 16 16)" fill="#1a1b20">
+              <rect width="32" height="32" rx="6" fill="var(--brand-logo-bg, #ffffff)" />
+              <g transform="rotate(-45 16 16)" fill="var(--brand-logo-fill, #1a1b20)">
                 <rect x="6.5" y="6" width="5" height="14" rx="2.5" />
                 <rect x="13.5" y="12" width="5" height="14" rx="2.5" />
                 <rect x="20.5" y="6" width="5" height="14" rx="2.5" />
@@ -1380,6 +1505,28 @@ export class CircuitChordForge extends LitElement {
                   <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
                   <line x1="23" y1="9" x2="17" y2="15"></line>
                   <line x1="17" y1="9" x2="23" y2="15"></line>
+                </svg>
+              `}
+            </button>
+            <!-- Theme Toggle Button -->
+            <button class="audio-btn theme-toggle-btn" @click=${this.toggleTheme} title="${this.theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}">
+              ${this.theme === 'dark' ? html`
+                <!-- Sun Icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="5"></circle>
+                  <line x1="12" y1="1" x2="12" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="23"></line>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                  <line x1="1" y1="12" x2="3" y2="12"></line>
+                  <line x1="21" y1="12" x2="23" y2="12"></line>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+              ` : html`
+                <!-- Moon Icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                 </svg>
               `}
             </button>
@@ -1568,7 +1715,7 @@ export class CircuitChordForge extends LitElement {
           <div class="patch-editor-view" style="display: ${this.activeTab === 'patch' ? 'block' : 'none'}; height: 100%;">
             <circuit-patch-editor 
               .patch=${this.activePatch} 
-              .midiConnected=${this.midiConnected}
+              .midiConnected=${this.midiConnected || this.isDebugMode}
               @patch-change=${this.handlePatchChange}
               @request-dump=${this.handleRequestDump}
               @load-slot=${this.handleLoadSlot}

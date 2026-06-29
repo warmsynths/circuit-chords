@@ -38,18 +38,18 @@ export class CircuitGrid extends LitElement {
       justify-content: center;
       font-size: 0.7rem;
       font-weight: 700;
-      color: #555;
+      color: var(--text-muted, #555);
       user-select: none;
       font-family: inherit;
     }
 
     .col-label {
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
       padding-bottom: 4px;
     }
 
     .row-label {
-      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      border-right: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
       padding-right: 8px;
     }
 
@@ -63,16 +63,16 @@ export class CircuitGrid extends LitElement {
     .pad {
       aspect-ratio: 1;
       border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
       display: grid;
       place-items: center;
       text-align: center;
       padding: 0.3rem;
-      color: #888;
+      color: var(--text-secondary, #888);
       font-weight: 700;
       letter-spacing: 0.02em;
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 100%), var(--pad-scale, #2c3a4e);
-      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05), 0 4px 8px rgba(0, 0, 0, 0.4);
+      box-shadow: var(--pad-shadow, inset 0 2px 4px rgba(255, 255, 255, 0.05), 0 4px 8px rgba(0, 0, 0, 0.4));
       transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
       user-select: none;
@@ -80,7 +80,7 @@ export class CircuitGrid extends LitElement {
     }
 
     .pad:hover {
-      border-color: rgba(255, 255, 255, 0.2);
+      border-color: var(--text-secondary);
     }
 
     .pad:active {
@@ -94,31 +94,45 @@ export class CircuitGrid extends LitElement {
     }
 
     .pad.dim {
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0) 100%), var(--pad-chromatic, #222328);
-      color: #444;
-      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+      box-shadow: var(--shadow-inset, inset 0 1px 2px rgba(0, 0, 0, 0.5));
     }
 
     .pad.scale {
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 100%), var(--pad-scale, #2c3a4e);
-      color: #ccc;
-      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05), 0 4px 8px rgba(0, 0, 0, 0.4);
+      box-shadow: var(--pad-shadow, inset 0 2px 4px rgba(255, 255, 255, 0.05), 0 4px 8px rgba(0, 0, 0, 0.4));
+    }
+
+    .pad.top-half.dim {
+      background: var(--pad-top-dim, #132230);
+      color: var(--pad-top-text-dim, #264660);
+    }
+    .pad.top-half.scale {
+      background: var(--pad-top-scale, #1a3246);
+      color: var(--pad-top-text-scale, #62a2d4);
+    }
+
+    .pad.bottom-half.dim {
+      background: var(--pad-bot-dim, #221222);
+      color: var(--pad-bot-text-dim, #4d234d);
+    }
+    .pad.bottom-half.scale {
+      background: var(--pad-bot-scale, #331833);
+      color: var(--pad-bot-text-scale, #9c5c9c);
     }
 
     /* "lit" corresponds to chord tones */
     .pad.lit {
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%), var(--accent-magenta, #ff2a9f);
-      color: white;
-      border-color: rgba(255, 255, 255, 0.25);
-      box-shadow: 0 0 20px rgba(255, 42, 159, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+      color: var(--text-on-accent, white);
+      border-color: var(--border-color, rgba(255, 255, 255, 0.25));
+      box-shadow: 0 0 20px var(--accent-magenta-alpha, rgba(255, 42, 159, 0.6)), var(--shadow-inset, inset 0 2px 4px rgba(255, 255, 255, 0.3));
     }
 
     /* "active" corresponds to the root note */
     .pad.active {
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0) 100%), var(--accent-cyan, #00f0ff);
-      color: #121316;
-      border-color: rgba(255, 255, 255, 0.3);
-      box-shadow: 0 0 18px rgba(0, 240, 255, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+      color: var(--accent-cyan-text, #121316);
+      border-color: var(--border-color, rgba(255, 255, 255, 0.3));
+      box-shadow: 0 0 18px var(--accent-cyan-alpha, rgba(0, 240, 255, 0.5)), var(--shadow-inset, inset 0 2px 4px rgba(255, 255, 255, 0.4));
     }
 
     .meta {
@@ -129,9 +143,9 @@ export class CircuitGrid extends LitElement {
 
     /* "target" corresponds to voicing recipe targets */
     .pad.target {
-      outline: 2px solid #ffffff;
+      outline: 2px solid var(--text-primary, #ffffff);
       outline-offset: 2px;
-      box-shadow: 0 0 12px #ffffff;
+      box-shadow: 0 0 12px var(--text-primary, #ffffff);
     }
 
     .step {
@@ -141,8 +155,8 @@ export class CircuitGrid extends LitElement {
       width: 18px;
       height: 18px;
       border-radius: 999px;
-      background: #ffffff;
-      color: #121316;
+      background: var(--text-primary, #ffffff);
+      color: var(--bg-charcoal, #121316);
       font-size: 0.68rem;
       font-weight: 800;
       display: grid;
@@ -238,9 +252,10 @@ export class CircuitGrid extends LitElement {
     }
 
     const step = recipeOrder.get(pad.index);
+    const halfClass = pad.index < 16 ? 'top-half' : 'bottom-half';
     return html`
       <div 
-        class=${`pad ${pad.state} ${step ? 'target' : ''}`} 
+        class=${`pad ${pad.state} ${halfClass} ${step ? 'target' : ''}`} 
         role="button" 
         tabindex="0"
         aria-label=${this.getAriaLabel(pad, step)}

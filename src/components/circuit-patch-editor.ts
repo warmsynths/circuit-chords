@@ -17,7 +17,7 @@ export class CircuitPatchEditor extends LitElement {
       display: flex;
       flex-direction: column;
       height: 100%;
-      color: #ffffff;
+      color: var(--text-primary, #ffffff);
       overflow-y: auto;
       padding: 16px;
       gap: 16px;
@@ -27,18 +27,18 @@ export class CircuitPatchEditor extends LitElement {
     .panel {
       background: var(--bg-charcoal, #1a1b20);
       border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
       padding: 20px;
       display: flex;
       flex-direction: column;
       gap: 20px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-panel, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
     }
 
     .panel-title {
       font-size: 0.85rem;
       font-weight: 700;
-      color: rgba(255, 255, 255, 0.6);
+      color: var(--text-secondary, rgba(255, 255, 255, 0.6));
       letter-spacing: 1px;
       text-transform: uppercase;
       margin: 0;
@@ -71,13 +71,13 @@ export class CircuitPatchEditor extends LitElement {
       background: var(--bg-onyx, #121316);
       border-radius: 20px;
       padding: 4px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
     }
 
     .mode-btn {
       background: transparent;
       border: none;
-      color: rgba(255, 255, 255, 0.6);
+      color: var(--btn-text-off, rgba(255, 255, 255, 0.6));
       padding: 6px 16px;
       border-radius: 16px;
       font-size: 0.8rem;
@@ -87,15 +87,15 @@ export class CircuitPatchEditor extends LitElement {
     }
 
     .mode-btn.active {
-      background: rgba(255, 255, 255, 0.1);
+      background: var(--border-color, rgba(255, 255, 255, 0.1));
       color: var(--accent-cyan, #00f0ff);
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
 
     .btn {
       background: var(--bg-onyx, #121316);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: #ffffff;
+      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+      color: var(--text-primary, #ffffff);
       padding: 8px 16px;
       border-radius: 8px;
       font-weight: 600;
@@ -107,20 +107,21 @@ export class CircuitPatchEditor extends LitElement {
     }
 
     .btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.2);
+      background: var(--border-color, rgba(255, 255, 255, 0.1));
+      border-color: var(--text-secondary, rgba(255, 255, 255, 0.2));
     }
 
     .btn.primary {
       background: var(--accent-cyan, #00f0ff);
-      color: #000;
+      color: var(--accent-cyan-text, #000);
       border: none;
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
     }
 
     .btn.primary:hover {
-      background: #33f3ff;
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.7);
+      background: var(--accent-cyan, #00f0ff);
+      opacity: 0.9;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
     }
 
     .btn:disabled {
@@ -136,9 +137,9 @@ export class CircuitPatchEditor extends LitElement {
 
     .slot-btn {
       aspect-ratio: 1;
-      background: var(--bg-onyx, #121316);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      color: rgba(255, 255, 255, 0.6);
+      background: var(--pad-scale, #121316);
+      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
+      color: var(--btn-text-off, rgba(255, 255, 255, 0.6));
       border-radius: 8px;
       display: flex;
       align-items: center;
@@ -149,14 +150,14 @@ export class CircuitPatchEditor extends LitElement {
     }
 
     .slot-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: #ffffff;
+      background: var(--border-color, rgba(255, 255, 255, 0.1));
+      color: var(--text-primary);
     }
 
     .slot-btn.active {
       background: var(--accent-cyan, #00f0ff);
-      color: #000;
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+      color: var(--accent-cyan-text, #000);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
     }
 
     .empty-state {
@@ -165,7 +166,7 @@ export class CircuitPatchEditor extends LitElement {
       align-items: center;
       justify-content: center;
       height: 100%;
-      color: rgba(255, 255, 255, 0.6);
+      color: var(--text-secondary, rgba(255, 255, 255, 0.6));
       text-align: center;
       gap: 16px;
     }
