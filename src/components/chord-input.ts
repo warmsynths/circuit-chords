@@ -278,24 +278,65 @@ export class ChordInput extends LitElement {
   }
 
   /**
+   * Normalizes capitalization issues in the chord quality/suffix so that Tonal
+   * can correctly identify the chord.
+   *
+   * @param quality The raw chord quality/extension suffix.
+   * @returns Case-normalized quality string.
+   */
+  private normalizeQuality(quality: string): string {
+    let q = quality;
+
+    // Normalize generic qualities case-insensitively to the formats Tonal expects
+    q = q.replace(/diminished/gi, 'diminished');
+    q = q.replace(/dim/gi, 'dim');
+    q = q.replace(/minor/gi, 'minor');
+    q = q.replace(/min/gi, 'min');
+    q = q.replace(/major/gi, 'major');
+    q = q.replace(/maj/gi, 'maj');
+    q = q.replace(/aug/gi, 'aug');
+    q = q.replace(/sus/gi, 'sus');
+    q = q.replace(/dom/gi, 'dom');
+
+    // Specific minor-major overrides (must happen after general maj/min normalization)
+    q = q.replace(/minmaj/gi, 'mMaj');
+    q = q.replace(/mmaj/gi, 'mMaj');
+
+    return q;
+  }
+
+  /**
    * Uses regex tokenization first, then Tonal chord parsing for musical data.
-    *
-    * @param source Freeform progression text.
-    * @returns Parsed chord collection in original order.
+   *
+   * @param source Freeform progression text.
+   * @returns Parsed chord collection in original order.
    */
   private parseProgression(source: string): ParsedChord[] {
     const tokens = this.tokenize(source);
     const parsed: ParsedChord[] = [];
 
     for (const symbol of tokens) {
-      const chord = Chord.get(symbol);
+      let chord = Chord.get(symbol);
+
+      // If Tonal couldn't parse it directly, try normalizing casing in the quality/suffix
+      if (chord.empty || chord.notes.length === 0) {
+        const [root, quality, bass] = Chord.tokenize(symbol);
+        if (root) {
+          const normalizedQuality = this.normalizeQuality(quality);
+          const normalizedSymbol = root + normalizedQuality + (bass ? '/' + bass : '');
+          const normalizedChord = Chord.get(normalizedSymbol);
+          if (!normalizedChord.empty && normalizedChord.notes.length > 0) {
+            chord = normalizedChord;
+          }
+        }
+      }
 
       if (chord.empty || chord.notes.length === 0) {
         continue;
       }
 
       parsed.push({
-        symbol,
+        symbol: chord.symbol || symbol,
         tonic: chord.tonic,
         quality: chord.quality,
         notes: chord.notes,
