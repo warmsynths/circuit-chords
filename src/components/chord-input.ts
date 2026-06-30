@@ -359,7 +359,10 @@ export class ChordInput extends LitElement {
    * @returns Cleaned string with separators replaced by spaces.
    */
   private sanitize(source: string): string {
-    return source
+    // Normalize capitalized B flat accidentals (e.g. BBm7 -> Bbm7, EB7 -> Eb7)
+    const normalized = source.replace(/([A-G])(B+)/g, (match, note, flats) => note + 'b'.repeat(flats.length));
+
+    return normalized
       .replace(/->|→|–|—/g, ' ')        // text/unicode arrows and dashes
       .replace(/[|>,;:]/g, ' ')          // bars, greater-than, commas, colons
       .replace(/[\r\n]+/g, ' ')          // newlines (pasted chord charts)

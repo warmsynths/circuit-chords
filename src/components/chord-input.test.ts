@@ -27,4 +27,20 @@ describe('ChordInput progression parsing & normalization', () => {
       'C#mMaj7',
     ]);
   });
+
+  it('correctly normalizes capitalized B flat accidentals to lowercase b', () => {
+    const chordInput = new ChordInput();
+    const parseProgression = (chordInput as any).parseProgression.bind(chordInput);
+
+    const testProgression = 'BBm7 EB7 C/EB BB';
+    const result = parseProgression(testProgression);
+
+    const symbols = result.map((c: any) => c.symbol);
+    expect(symbols).toEqual([
+      'Bbm7',
+      'Eb7',
+      'C/Eb',
+      'Bb',
+    ]);
+  });
 });
