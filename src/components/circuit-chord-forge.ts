@@ -4,7 +4,8 @@ import { Chord, Interval, Note } from 'tonal';
 import './chord-input';
 import './progression-stepper';
 import './circuit-grid';
-import type { ChordInputParsedEventDetail, ParsedChord } from './chord-input';
+import type { ChordInputParsedEventDetail } from './chord-input';
+import { parseProgression, type ParsedChord } from '../lib/chord-parser';
 import {
   KEY_OPTIONS,
   SCALE_DISPLAY_NAMES,
@@ -1533,33 +1534,26 @@ export class CircuitChordForge extends LitElement {
   }
 
   private loadDefaultProgression() {
-    const defaultSource = 'Cmaj7 Am7 Dm7 G7';
-    const tokens = defaultSource.match(/[A-G](?:#{1,2}|b{1,2})?(?:[^\s,|/]+)?(?:\/[A-G](?:#{1,2}|b{1,2})?)?/g) || [];
-    const parsed: ParsedChord[] = [];
-    for (const symbol of tokens) {
-      const chord = Chord.get(symbol);
-      if (!chord.empty && chord.notes.length > 0) {
-        parsed.push({
-          symbol,
-          tonic: chord.tonic,
-          quality: chord.quality,
-          notes: chord.notes,
-          intervals: chord.intervals,
-          aliases: chord.aliases,
-        });
-      }
+    const urlParams = new URLSearchParams(window.location.search);
+    const progressionParam = urlParams.get('p');
+    
+    let source = progressionParam ? progressionParam.trim() : '';
+    let parsed = source ? parseProgression(source) : [];
+    
+    if (parsed.length === 0) {
+      source = 'Cmaj7 Am7 Dm7 G7';
+      parsed = parseProgression(source);
     }
-    if (parsed.length > 0) {
-      this.progression = parsed;
-      this.source = defaultSource;
-      this.activeIndex = 0;
-      const firstChord = parsed[0];
-      const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
-      this.originalKey = baseKey;
-      const isMinor = firstChord?.quality?.toLowerCase().includes('minor') || firstChord?.symbol?.includes('m');
-      const defaultScale = isMinor ? 'minor' : 'major';
-      this.config = { ...this.config, key: baseKey, scale: defaultScale };
-    }
+
+    this.progression = parsed;
+    this.source = source;
+    this.activeIndex = 0;
+    const firstChord = parsed[0];
+    const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
+    this.originalKey = baseKey;
+    const isMinor = firstChord?.quality?.toLowerCase().includes('minor') || firstChord?.symbol?.includes('m');
+    const defaultScale = isMinor ? 'minor' : 'major';
+    this.config = { ...this.config, key: baseKey, scale: defaultScale };
   }
 
   render() {

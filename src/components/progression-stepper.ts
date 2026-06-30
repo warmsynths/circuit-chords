@@ -1,6 +1,6 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import type { ParsedChord } from './chord-input';
+import type { ParsedChord } from '../lib/chord-parser';
 
 /**
  * Renders progression pills and emits selected chord index.

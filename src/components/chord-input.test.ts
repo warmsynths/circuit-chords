@@ -1,11 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { ChordInput } from './chord-input';
+import { parseProgression } from '../lib/chord-parser';
 
-describe('ChordInput progression parsing & normalization', () => {
+describe('Chord progression parsing & normalization', () => {
   it('correctly normalizes and parses C#Dim and other capitalized/mixed-case chords', () => {
-    const chordInput = new ChordInput();
-    const parseProgression = (chordInput as any).parseProgression.bind(chordInput);
-
     const testProgression = 'C#Dim C#dim C#DIM C#Dim7 C#o C#o7 C#Maj C#Min C#Maj7 C#Min7 C#Aug C#Sus4 C#mMaj7 C#mmaj7';
     const result = parseProgression(testProgression);
 
@@ -29,9 +26,6 @@ describe('ChordInput progression parsing & normalization', () => {
   });
 
   it('correctly normalizes capitalized B flat accidentals to lowercase b', () => {
-    const chordInput = new ChordInput();
-    const parseProgression = (chordInput as any).parseProgression.bind(chordInput);
-
     const testProgression = 'BBm7 EB7 C/EB BB';
     const result = parseProgression(testProgression);
 
@@ -41,6 +35,20 @@ describe('ChordInput progression parsing & normalization', () => {
       'Eb7',
       'C/Eb',
       'Bb',
+    ]);
+  });
+
+  it('correctly handles progression strings from query parameter decoding', () => {
+    // If the query parameter is ?p=Dmaj7+Em7+Gm7+BBm7, URLSearchParams decodes it to:
+    const decodedQueryParam = 'Dmaj7 Em7 Gm7 BBm7';
+    const result = parseProgression(decodedQueryParam);
+
+    const symbols = result.map((c: any) => c.symbol);
+    expect(symbols).toEqual([
+      'Dmaj7',
+      'Em7',
+      'Gm7',
+      'Bbm7',
     ]);
   });
 });
