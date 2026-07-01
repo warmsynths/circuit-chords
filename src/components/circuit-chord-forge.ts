@@ -1242,8 +1242,8 @@ export class CircuitChordForge extends LitElement {
   @state() private hideScaleWarningForNotes = '';
   @state() private config: GridConfig = {
     key: 'C',
-    scale: 'minor',
-    mode: 'collapsed',
+    scale: 'chromatic',
+    mode: 'chromatic',
   };
   @state() private voicing: VoicingMode = 'triad';
   @state() private autoPlay = true;
@@ -1551,7 +1551,17 @@ export class CircuitChordForge extends LitElement {
     const firstChord = parsed[0];
     const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
     this.originalKey = baseKey;
-    const isMinor = firstChord?.quality?.toLowerCase().includes('minor') || firstChord?.symbol?.includes('m');
+    const symbol = firstChord?.symbol ?? '';
+    const rootMatch = symbol.match(/^([A-G](?:#{1,2}|b{1,2})?)(.*)$/);
+    const suffix = rootMatch ? rootMatch[2] : '';
+    const isMinor = firstChord?.quality?.toLowerCase().includes('minor') ||
+      firstChord?.quality?.toLowerCase().includes('diminished') ||
+      ((suffix.startsWith('m') && !suffix.startsWith('maj')) ||
+       suffix.startsWith('min') ||
+       suffix.startsWith('dim') ||
+       suffix.startsWith('o') ||
+       suffix.startsWith('ø') ||
+       suffix.startsWith('-'));
     const defaultScale = isMinor ? 'minor' : 'major';
     this.config = { ...this.config, key: baseKey, scale: defaultScale };
   }
@@ -2123,7 +2133,17 @@ export class CircuitChordForge extends LitElement {
     const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
     this.originalKey = baseKey;
 
-    const isMinor = firstChord?.quality?.toLowerCase().includes('minor') || firstChord?.symbol?.includes('m');
+    const symbol = firstChord?.symbol ?? '';
+    const rootMatch = symbol.match(/^([A-G](?:#{1,2}|b{1,2})?)(.*)$/);
+    const suffix = rootMatch ? rootMatch[2] : '';
+    const isMinor = firstChord?.quality?.toLowerCase().includes('minor') ||
+      firstChord?.quality?.toLowerCase().includes('diminished') ||
+      ((suffix.startsWith('m') && !suffix.startsWith('maj')) ||
+       suffix.startsWith('min') ||
+       suffix.startsWith('dim') ||
+       suffix.startsWith('o') ||
+       suffix.startsWith('ø') ||
+       suffix.startsWith('-'));
     const defaultScale = isMinor ? 'minor' : 'major';
 
     if (firstChord?.tonic) {
