@@ -174,7 +174,7 @@ export class CircuitChordForge extends LitElement {
     .app-grid {
       display: grid;
       grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
-      grid-template-rows: 48px var(--header-height) 1fr var(--footer-height) auto;
+      grid-template-rows: 48px var(--header-height) 1fr minmax(var(--footer-height), auto) auto;
       gap: var(--gap);
       height: calc(100vh - (var(--gap) * 2));
       height: calc(100dvh - (var(--gap) * 2));
@@ -915,8 +915,93 @@ export class CircuitChordForge extends LitElement {
       grid-column: 2 / -1;
       grid-row: 4 / 5;
       display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+      height: auto !important;
+      padding: 8px 24px;
+    }
+
+    .footer-drawer-content {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .footer-voicing-row {
+      display: flex;
       align-items: center;
-      padding: 0 24px;
+      gap: 12px;
+    }
+
+    .footer-voicing-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .quality-selector-row {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      width: 100%;
+      padding-bottom: 2px;
+      margin-bottom: 2px;
+    }
+
+    .quality-selector-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .quality-pill {
+      background: var(--bg-charcoal);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .quality-pill:hover {
+      border-color: var(--text-primary);
+      color: var(--text-primary);
+    }
+
+    .quality-pill.active {
+      background: var(--bg-charcoal);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan-alpha);
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .footer-timeline.peek-hint {
+      animation: peekPulse 1.5s ease;
+    }
+
+    @keyframes peekPulse {
+      0% { box-shadow: none; }
+      30% { box-shadow: 0 0 12px var(--accent-cyan-alpha), inset 0 0 8px rgba(0, 240, 255, 0.05); }
+      100% { box-shadow: none; }
     }
 
     progression-stepper {
@@ -1125,7 +1210,7 @@ export class CircuitChordForge extends LitElement {
 
       .app-grid {
         grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
-        grid-template-rows: 48px var(--header-height) 1fr var(--footer-height) auto;
+        grid-template-rows: 48px var(--header-height) 1fr minmax(var(--footer-height), auto) auto;
         gap: var(--gap);
         height: calc(100vh - (var(--gap) * 2));
         height: calc(100dvh - (var(--gap) * 2));
@@ -1418,11 +1503,14 @@ export class CircuitChordForge extends LitElement {
   @state() private hideScaleWarningForNotes = '';
   @state() private config: GridConfig = {
     key: 'C',
-    scale: 'minor',
-    mode: 'collapsed',
+    scale: 'chromatic',
+    mode: 'chromatic',
   };
   @state() private voicedOffsets: Record<number, number[]> = {};
   @state() private isMobileViewport = false;
+  @state() private showQualitySelector = false;
+  private hasSeenDrawerPeek = localStorage.getItem('circuit-chords.drawerPeekSeen') === 'true';
+  private peekTimeout: ReturnType<typeof setTimeout> | null = null;
   
   // Voicing drag-to-change state
   private isDraggingVoicing = false;
@@ -1753,9 +1841,8 @@ export class CircuitChordForge extends LitElement {
       const firstChord = parsed[0];
       const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
       this.originalKey = baseKey;
-      const isMinor = firstChord?.quality?.toLowerCase().includes('minor') || firstChord?.symbol?.includes('m');
-      const defaultScale = isMinor ? 'minor' : 'major';
-      this.config = { ...this.config, key: baseKey, scale: defaultScale };
+      const defaultScale = 'chromatic';
+      this.config = { ...this.config, key: baseKey, scale: defaultScale, mode: 'chromatic' };
     }
   }
 
@@ -2134,7 +2221,7 @@ export class CircuitChordForge extends LitElement {
           </div>
         </nav>
 
-        <!-- 2. Top Header Bar (active config summary + voicing toggle) -->
+        <!-- 2. Top Header Bar (active config summary + audio controls) -->
         <header class="panel header-top">
           <div class="config-group">
             <span class="config-label">Key / Scale</span>
@@ -2147,47 +2234,40 @@ export class CircuitChordForge extends LitElement {
 
           <div style="flex:1;"></div>
 
-          <div class="config-group voicing-group">
-            <span class="config-label">Voicing</span>
-            <div class="voicing-control-row">
-              ${this.renderVoicingKeyboard()}
+          <div class="relocated-audio-controls">
+            <!-- Audio State Button (Mute) -->
+            <button 
+              class="audio-btn ${this.audioActive ? 'active' : ''}" 
+              @click=${this.toggleAudio} 
+              title="${this.audioActive ? 'Disable Audio' : 'Enable Audio'}"
+            >
+              ${this.audioActive ? html`
+                <svg viewBox="0 0 24 24">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+              ` : html`
+                <svg viewBox="0 0 24 24">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <line x1="23" y1="9" x2="17" y2="15"></line>
+                  <line x1="17" y1="9" x2="23" y2="15"></line>
+                </svg>
+              `}
+            </button>
 
-              <div class="relocated-audio-controls">
-                <!-- Audio State Button (Mute) -->
-                <button 
-                  class="audio-btn ${this.audioActive ? 'active' : ''}" 
-                  @click=${this.toggleAudio} 
-                  title="${this.audioActive ? 'Disable Audio' : 'Enable Audio'}"
-                >
-                  ${this.audioActive ? html`
-                    <svg viewBox="0 0 24 24">
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                    </svg>
-                  ` : html`
-                    <svg viewBox="0 0 24 24">
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                      <line x1="23" y1="9" x2="17" y2="15"></line>
-                      <line x1="17" y1="9" x2="23" y2="15"></line>
-                    </svg>
-                  `}
-                </button>
-
-                <!-- Human toggle Button -->
-                ${this.humanLoaded ? html`
-                  <button 
-                    class="audio-btn ${this.showHuman ? 'active' : ''}" 
-                    @click=${this.toggleHuman} 
-                    title="Toggle Human Settings"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                      <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                  </button>
-                ` : null}
-              </div>
-            </div>
+            <!-- Human toggle Button -->
+            ${this.humanLoaded ? html`
+              <button 
+                class="audio-btn ${this.showHuman ? 'active' : ''}" 
+                @click=${this.toggleHuman} 
+                title="Toggle Human Settings"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </button>
+            ` : null}
           </div>
         </header>
 
@@ -2487,7 +2567,44 @@ export class CircuitChordForge extends LitElement {
         </aside>
 
         <!-- 5. Bottom Timeline Footer -->
-        <footer class="panel footer-timeline">
+        <footer class="panel footer-timeline ${this.showQualitySelector && !this.hasSeenDrawerPeek ? 'peek-hint' : ''}">
+          ${this.showQualitySelector ? html`
+            <div class="footer-drawer-content">
+              <div class="footer-voicing-row">
+                <span class="footer-voicing-label">Voicing</span>
+                ${this.renderVoicingKeyboard()}
+              </div>
+              <div class="quality-selector-row">
+                ${[
+                  { label: 'maj7', value: 'maj7' },
+                  { label: 'm7', value: 'm7' },
+                  { label: '7', value: '7' },
+                  { label: 'm7b5', value: 'm7b5' },
+                  { label: 'dim7', value: 'dim7' },
+                  { label: 'sus4', value: 'sus4' },
+                  { label: '9', value: '9' },
+                  { label: 'maj', value: 'maj' },
+                  { label: 'm', value: 'm' }
+                ].map(q => {
+                  const activeChord = this.progression[this.activeIndex];
+                  let isActive = false;
+                  if (activeChord && activeChord.tonic) {
+                    const suffix = activeChord.symbol.slice(activeChord.tonic.length);
+                    const qSuffix = q.value === 'maj' ? '' : q.value;
+                    isActive = suffix === qSuffix;
+                  }
+                  return html`
+                    <button 
+                      class="quality-pill ${isActive ? 'active' : ''}"
+                      @click=${() => this.changeActiveChordQuality(q.value)}
+                    >
+                      ${q.label}
+                    </button>
+                  `;
+                })}
+              </div>
+            </div>
+          ` : null}
           <progression-stepper
             .originalChords=${this.progression}
             .keyChords=${this.transposeProgression && this.originalKey !== this.config.key ? transposedProgression : []}
@@ -2520,6 +2637,46 @@ export class CircuitChordForge extends LitElement {
   }
 
   // === Business Logic Ported ===
+
+  private changeActiveChordQuality(qualityValue: string) {
+    const activeChord = this.progression[this.activeIndex];
+    if (!activeChord) return;
+
+    const tonic = activeChord.tonic || 'C';
+    const suffix = qualityValue === 'maj' ? '' : qualityValue;
+    const newSymbol = `${tonic}${suffix}`;
+    
+    const parsed = Chord.get(newSymbol);
+    if (!parsed.empty && parsed.notes.length > 0) {
+      const updatedChord: ParsedChord = {
+        symbol: newSymbol,
+        tonic: parsed.tonic,
+        quality: parsed.quality,
+        notes: parsed.notes,
+        intervals: parsed.intervals,
+        aliases: parsed.aliases
+      };
+      
+      const nextProgression = [...this.progression];
+      nextProgression[this.activeIndex] = updatedChord;
+      this.progression = nextProgression;
+      
+      this.voicedOffsets = {
+        ...this.voicedOffsets,
+        [this.activeIndex]: this.getDefaultVoicedOffsets(updatedChord)
+      };
+
+      this.updateSourceFromProgression();
+
+      if (this.autoPlay) {
+        this.playActiveVoicingDebounced();
+      }
+    }
+  }
+
+  private updateSourceFromProgression() {
+    this.source = this.progression.map(c => c.symbol).join(' ');
+  }
 
   private playActiveVoicing() {
     const transposedProgression = this.getTransposedProgression();
@@ -2624,9 +2781,27 @@ export class CircuitChordForge extends LitElement {
 
 
   private onChordSelected(event: CustomEvent<number>) {
-    this.activeIndex = event.detail;
-    if (this.autoPlay) {
-      setTimeout(() => this.playActiveVoicing(), 20);
+    const newIndex = event.detail;
+    if (this.activeIndex === newIndex) {
+      this.showQualitySelector = !this.showQualitySelector;
+    } else {
+      this.activeIndex = newIndex;
+      this.showQualitySelector = false;
+      if (this.autoPlay) {
+        setTimeout(() => this.playActiveVoicing(), 20);
+      }
+
+      // One-time peek to hint at the drawer functionality
+      if (!this.hasSeenDrawerPeek) {
+        this.hasSeenDrawerPeek = true;
+        localStorage.setItem('circuit-chords.drawerPeekSeen', 'true');
+        this.showQualitySelector = true;
+        if (this.peekTimeout) clearTimeout(this.peekTimeout);
+        this.peekTimeout = setTimeout(() => {
+          this.showQualitySelector = false;
+          this.peekTimeout = null;
+        }, 1500);
+      }
     }
   }
 
@@ -2640,11 +2815,10 @@ export class CircuitChordForge extends LitElement {
     const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
     this.originalKey = baseKey;
 
-    const isMinor = firstChord?.quality?.toLowerCase().includes('minor') || firstChord?.symbol?.includes('m');
-    const defaultScale = isMinor ? 'minor' : 'major';
+    const defaultScale = 'chromatic';
 
     if (firstChord?.tonic) {
-      this.config = { ...this.config, key: baseKey, scale: defaultScale };
+      this.config = { ...this.config, key: baseKey, scale: defaultScale, mode: 'chromatic' };
     }
 
     if (this.autoPlay && this.progression.length > 0) {
