@@ -169,7 +169,7 @@ export class CircuitChordForge extends LitElement {
     .app-grid {
       display: grid;
       grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
-      grid-template-rows: 48px var(--header-height) 1fr var(--footer-height);
+      grid-template-rows: 48px var(--header-height) 1fr var(--footer-height) auto;
       gap: var(--gap);
       height: calc(100vh - (var(--gap) * 2));
       height: calc(100dvh - (var(--gap) * 2));
@@ -918,6 +918,86 @@ export class CircuitChordForge extends LitElement {
       width: 100%;
     }
 
+    /* Section 6: Bottom Links Footer */
+    .app-links-footer {
+      grid-column: 1 / -1;
+      grid-row: 5 / 6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 8px 16px 0 16px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border-color);
+      margin-top: -4px;
+      flex-wrap: wrap;
+    }
+
+    .footer-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+    .footer-link:hover {
+      color: var(--accent-cyan);
+      transform: translateY(-1px);
+    }
+
+    .footer-link-highlight {
+      color: var(--text-primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+
+    .footer-link-highlight:hover {
+      color: var(--accent-cyan);
+      text-decoration: underline;
+    }
+
+    .footer-divider {
+      color: var(--border-color);
+      user-select: none;
+    }
+
+    .footer-icon {
+      flex-shrink: 0;
+      transition: stroke 0.2s ease;
+    }
+
+    .footer-link:hover .footer-icon {
+      stroke: var(--accent-cyan);
+    }
+
+    .heart-icon {
+      display: inline-block;
+      animation: heartPulse 2.5s infinite ease-in-out;
+      margin: 0 2px;
+    }
+
+    .coffee-icon {
+      display: inline-block;
+      transition: transform 0.2s ease;
+    }
+
+    .footer-link:hover .coffee-icon {
+      transform: rotate(10deg) scale(1.1);
+    }
+
+    @keyframes heartPulse {
+      0% { transform: scale(1); }
+      14% { transform: scale(1.15); }
+      28% { transform: scale(1); }
+      42% { transform: scale(1.15); }
+      70% { transform: scale(1); }
+    }
+
     /* Close Button (Global for Modal and Drawer) */
     .close-btn {
       display: flex;
@@ -1040,7 +1120,7 @@ export class CircuitChordForge extends LitElement {
 
       .app-grid {
         grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
-        grid-template-rows: 48px var(--header-height) 1fr var(--footer-height);
+        grid-template-rows: 48px var(--header-height) 1fr var(--footer-height) auto;
         gap: var(--gap);
         height: calc(100vh - (var(--gap) * 2));
         height: calc(100dvh - (var(--gap) * 2));
@@ -2004,6 +2084,25 @@ export class CircuitChordForge extends LitElement {
             .activeIndex=${this.activeIndex}
             @chord-selected=${(e: CustomEvent<number>) => this.onChordSelected(e)}
           ></progression-stepper>
+        </footer>
+
+        <!-- 6. Bottom Links Footer -->
+        <footer class="app-links-footer">
+          <a href="https://github.com/warmsynths/circuit-chords" target="_blank" rel="noopener noreferrer" class="footer-link">
+            <svg class="footer-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+            GitHub
+          </a>
+          <span class="footer-divider">|</span>
+          <span class="footer-text">
+            Made with <span class="heart-icon">💖</span> by <a href="mailto:warmsynthsiloveyou@gmail.com" class="footer-link-highlight">warmsynths</a>
+          </span>
+          <span class="footer-divider">|</span>
+          <a href="https://ko-fi.com/warmsynths" target="_blank" rel="noopener noreferrer" class="footer-link">
+            <span class="coffee-icon">☕</span>
+            Support the Voyage
+          </a>
         </footer>
       </div>
     `;

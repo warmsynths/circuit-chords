@@ -8,10 +8,7 @@ declare module 'human-engine' {
   export type HumanState = any;
 }
 
-declare global {
-  interface HTMLElementTagNameMap {
-    'human-panel': any;
-  }
+interface HTMLElementTagNameMap {
+  'human-panel': any;
 }
 
-export {};

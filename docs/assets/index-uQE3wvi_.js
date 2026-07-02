@@ -1234,7 +1234,7 @@
       text-align: center;
       gap: 16px;
     }
-  `;Jn([fe({type:Object})],jt.prototype,"patch",2);Jn([fe({type:Boolean})],jt.prototype,"midiConnected",2);Jn([X()],jt.prototype,"activeSlot",2);Jn([X()],jt.prototype,"viewMode",2);jt=Jn([Bt("circuit-patch-editor")],jt);var y0=Object.defineProperty,x0=Object.getOwnPropertyDescriptor,te=(n,e,t,s)=>{for(var i=s>1?void 0:s?x0(e,t):e,r=n.length-1,o;r>=0;r--)(o=n[r])&&(i=(s?o(e,t,i):o(i))||i);return s&&i&&y0(e,t,i),i};let J=class extends Ue{constructor(){super(...arguments),this.theme=localStorage.getItem("circuit-chords.theme")||"dark",this.audioActive=!1,this.audioCleanup=null,this.activeTab="grid",this.activePatch=null,this.progression=[],this.originalKey="C",this.activeIndex=0,this.hideScaleWarningForNotes="",this.config={key:"C",scale:"minor",mode:"collapsed"},this.voicing="triad",this.autoPlay=!0,this.transposeProgression=!0,this.inversion=0,this.source="",this.showSettings=!1,this.showHelp=!1,this.humanLoaded=!1,this.showHuman=!1,this.humanState=null,this.showScaleWarnings=localStorage.getItem("circuit-chords.showScaleWarnings")!=="false",this.midiConnected=!1,this.midiDevices=[],this.selectedMidiDevice="",this.activeMidiDevice=null,this.selectedMidiChannel=1,this.midiAccess=null,this.activeMidiTimeouts=new Map}get isDebugMode(){return new URLSearchParams(window.location.search).has("debug")}get isCircuitTracksConnected(){return this.isDebugMode?!0:this.midiConnected&&!!this.activeMidiDevice&&this.activeMidiDevice.toLowerCase().includes("circuit tracks")}getOrCreateMockPatch(){const n=new Uint8Array(Ts);return n[45]=1,n[46]=0,n[64]=64,n[70]=1,n[71]=64,n[73]=64,n[79]=10,n[80]=50,n[81]=64,n[82]=20,ho(n)}toggleHelp(){this.showHelp=!this.showHelp,this.showHelp&&(this.showSettings=!1,this.showHuman=!1)}toggleSettings(){this.showSettings=!this.showSettings,this.showSettings&&(this.showHelp=!1,this.showHuman=!1)}toggleHuman(){this.showHuman=!this.showHuman,this.showHuman&&(this.showHelp=!1,this.showSettings=!1)}handleHumanChange(n){this.humanState=n.detail}handleHumanPreview(n){this.humanState=n.detail,this.playActiveVoicing()}toggleScaleWarnings(n){this.showScaleWarnings=n,localStorage.setItem("circuit-chords.showScaleWarnings",String(n))}async toggleAudio(){try{this.audioActive?await Xg():await Gg()}catch(n){console.warn("Failed to toggle audio:",n)}}toggleTheme(){this.theme=this.theme==="dark"?"light":"dark",localStorage.setItem("circuit-chords.theme",this.theme),this.classList.toggle("theme-light",this.theme==="light")}connectedCallback(){super.connectedCallback(),this.isDebugMode&&(this.activePatch=this.getOrCreateMockPatch()),this.loadDefaultProgression(),this.initMidi();const n="https://warmsynths.github.io/human-midi/human-engine.js";import(n).then(()=>{this.humanLoaded=!0}).catch(e=>{console.warn("Could not dynamically load human panel from",n,":",e)}),this.classList.toggle("theme-light",this.theme==="light"),this.audioActive=Yg(),this.audioCleanup=Zg(e=>{this.audioActive=e==="running"})}disconnectedCallback(){this.audioCleanup&&this.audioCleanup(),super.disconnectedCallback()}initMidi(){typeof navigator<"u"&&"requestMIDIAccess"in navigator&&navigator.requestMIDIAccess({sysex:!0}).then(n=>{this.midiAccess=n,this.updateMidiStatus(n),n.onstatechange=()=>{this.updateMidiStatus(n)}}).catch(n=>{console.warn("MIDI access request failed:",n),this.midiConnected=!1,this.midiDevices=[]})}updateMidiStatus(n){const e=[];n&&n.inputs&&n.inputs.forEach(t=>{t.state==="connected"&&t.name&&!e.includes(t.name)&&e.push(t.name)}),n&&n.outputs&&n.outputs.forEach(t=>{t.state==="connected"&&t.name&&!e.includes(t.name)&&e.push(t.name)}),this.midiDevices=e,(this.selectedMidiDevice===""||!e.includes(this.selectedMidiDevice))&&(this.selectedMidiDevice=e.length>0?e[0]:""),this.activeMidiDevice!==null&&!e.includes(this.activeMidiDevice)?(this.activeMidiDevice=null,this.midiConnected=!1):this.activeMidiDevice!==null?this.midiConnected=!0:this.midiConnected=!1}connectMidiDevice(){this.selectedMidiDevice&&(this.activeMidiDevice=this.selectedMidiDevice,this.midiConnected=!0,this.midiAccess&&this.midiAccess.inputs.forEach(n=>{n.name===this.activeMidiDevice&&(n.onmidimessage=this.handleMidiMessage.bind(this))}))}handleMidiMessage(n){const e=n.data;if(e.length===Ts&&e[0]===240)try{this.activePatch=ho(e)}catch(t){console.warn("Failed to parse sysex patch dump",t)}}sendSysexCommand(n){this.midiAccess&&this.activeMidiDevice&&this.midiAccess.outputs.forEach(e=>{e.name===this.activeMidiDevice&&e.send(n)})}handlePatchChange(n){if(!this.activePatch)return;const{path:e,value:t}=n.detail,s={...this.activePatch};s.oscillators=[{...s.oscillators[0]},{...s.oscillators[1]}],s.filter={...s.filter},s.mixer={...s.mixer},s.envelopes=[{...s.envelopes[0]},{...s.envelopes[1]},{...s.envelopes[2]}];const i=e.split(".");let r=s;for(let a=0;a<i.length-1;a++)r=r[i[a]];r[i[i.length-1]]=t,this.activePatch=s;const o=d0(s);this.sendSysexCommand(o)}handleRequestDump(){const n=p0(0);this.sendSysexCommand(n)}handleLoadSlot(n){const e=n.detail.slot;this.midiAccess&&this.activeMidiDevice&&(this.midiAccess.outputs.forEach(t=>{t.name===this.activeMidiDevice&&t.send([192,e])}),setTimeout(()=>{this.handleRequestDump()},50))}disconnectMidiDevice(){this.activeMidiDevice=null,this.midiConnected=!1}loadDefaultProgression(){const n="Cmaj7 Am7 Dm7 G7",e=n.match(/[A-G](?:#{1,2}|b{1,2})?(?:[^\s,|/]+)?(?:\/[A-G](?:#{1,2}|b{1,2})?)?/g)||[],t=[];for(const s of e){const i=Ge(s);!i.empty&&i.notes.length>0&&t.push({symbol:s,tonic:i.tonic,quality:i.quality,notes:i.notes,intervals:i.intervals,aliases:i.aliases})}if(t.length>0){this.progression=t,this.source=n,this.activeIndex=0;const s=t[0],i=this.normalizeKey(s?.tonic)??this.config.key;this.originalKey=i;const o=s?.quality?.toLowerCase().includes("minor")||s?.symbol?.includes("m")?"minor":"major";this.config={...this.config,key:i,scale:o}}}render(){const n=this.getTransposedProgression(),e=n[this.activeIndex]??null,t=ao(e,this.config),s=co(e,t,this.voicing,this.inversion),i=e?e.notes.map(o=>ct(o)).filter(Boolean):[],r=e&&this.config.mode==="collapsed"?i.filter(o=>!t.some(a=>a.note===o)):[];return $`
+  `;Jn([fe({type:Object})],jt.prototype,"patch",2);Jn([fe({type:Boolean})],jt.prototype,"midiConnected",2);Jn([X()],jt.prototype,"activeSlot",2);Jn([X()],jt.prototype,"viewMode",2);jt=Jn([Bt("circuit-patch-editor")],jt);var y0=Object.defineProperty,x0=Object.getOwnPropertyDescriptor,te=(n,e,t,s)=>{for(var i=s>1?void 0:s?x0(e,t):e,r=n.length-1,o;r>=0;r--)(o=n[r])&&(i=(s?o(e,t,i):o(i))||i);return s&&i&&y0(e,t,i),i};let J=class extends Ue{constructor(){super(...arguments),this.theme=localStorage.getItem("circuit-chords.theme")||"dark",this.audioActive=!1,this.audioCleanup=null,this.activeTab="grid",this.activePatch=null,this.progression=[],this.originalKey="C",this.activeIndex=0,this.hideScaleWarningForNotes="",this.config={key:"C",scale:"minor",mode:"collapsed"},this.voicing="triad",this.autoPlay=!0,this.transposeProgression=!0,this.inversion=0,this.source="",this.showSettings=!1,this.showHelp=!1,this.humanLoaded=!1,this.showHuman=!1,this.humanState=null,this.showScaleWarnings=localStorage.getItem("circuit-chords.showScaleWarnings")!=="false",this.midiConnected=!1,this.midiDevices=[],this.selectedMidiDevice="",this.activeMidiDevice=null,this.selectedMidiChannel=1,this.midiAccess=null,this.activeMidiTimeouts=new Map}get isDebugMode(){return new URLSearchParams(window.location.search).has("debug")}get isCircuitTracksConnected(){return this.isDebugMode?!0:this.midiConnected&&!!this.activeMidiDevice&&this.activeMidiDevice.toLowerCase().includes("circuit tracks")}getOrCreateMockPatch(){const n=new Uint8Array(Ts);return n[45]=1,n[46]=0,n[64]=64,n[70]=1,n[71]=64,n[73]=64,n[79]=10,n[80]=50,n[81]=64,n[82]=20,ho(n)}toggleHelp(){this.showHelp=!this.showHelp,this.showHelp&&(this.showSettings=!1,this.showHuman=!1)}toggleSettings(){this.showSettings=!this.showSettings,this.showSettings&&(this.showHelp=!1,this.showHuman=!1)}toggleHuman(){this.showHuman=!this.showHuman,this.showHuman&&(this.showHelp=!1,this.showSettings=!1)}handleHumanChange(n){this.humanState=n.detail}handleHumanPreview(n){this.humanState=n.detail,this.playActiveVoicing()}toggleScaleWarnings(n){this.showScaleWarnings=n,localStorage.setItem("circuit-chords.showScaleWarnings",String(n))}async toggleAudio(){try{this.audioActive?await Xg():await Gg()}catch(n){console.warn("Failed to toggle audio:",n)}}toggleTheme(){this.theme=this.theme==="dark"?"light":"dark",localStorage.setItem("circuit-chords.theme",this.theme),this.classList.toggle("theme-light",this.theme==="light")}connectedCallback(){super.connectedCallback(),this.isDebugMode&&(this.activePatch=this.getOrCreateMockPatch()),this.loadDefaultProgression(),this.initMidi(),import("https://warmsynths.github.io/human-midi/human-engine.js").then(()=>{this.humanLoaded=!0}).catch(t=>{console.warn("Could not load human panel:",t)}),this.classList.toggle("theme-light",this.theme==="light"),this.audioActive=Yg(),this.audioCleanup=Zg(t=>{this.audioActive=t==="running"})}disconnectedCallback(){this.audioCleanup&&this.audioCleanup(),super.disconnectedCallback()}initMidi(){typeof navigator<"u"&&"requestMIDIAccess"in navigator&&navigator.requestMIDIAccess({sysex:!0}).then(n=>{this.midiAccess=n,this.updateMidiStatus(n),n.onstatechange=()=>{this.updateMidiStatus(n)}}).catch(n=>{console.warn("MIDI access request failed:",n),this.midiConnected=!1,this.midiDevices=[]})}updateMidiStatus(n){const e=[];n&&n.inputs&&n.inputs.forEach(t=>{t.state==="connected"&&t.name&&!e.includes(t.name)&&e.push(t.name)}),n&&n.outputs&&n.outputs.forEach(t=>{t.state==="connected"&&t.name&&!e.includes(t.name)&&e.push(t.name)}),this.midiDevices=e,(this.selectedMidiDevice===""||!e.includes(this.selectedMidiDevice))&&(this.selectedMidiDevice=e.length>0?e[0]:""),this.activeMidiDevice!==null&&!e.includes(this.activeMidiDevice)?(this.activeMidiDevice=null,this.midiConnected=!1):this.activeMidiDevice!==null?this.midiConnected=!0:this.midiConnected=!1}connectMidiDevice(){this.selectedMidiDevice&&(this.activeMidiDevice=this.selectedMidiDevice,this.midiConnected=!0,this.midiAccess&&this.midiAccess.inputs.forEach(n=>{n.name===this.activeMidiDevice&&(n.onmidimessage=this.handleMidiMessage.bind(this))}))}handleMidiMessage(n){const e=n.data;if(e.length===Ts&&e[0]===240)try{this.activePatch=ho(e)}catch(t){console.warn("Failed to parse sysex patch dump",t)}}sendSysexCommand(n){this.midiAccess&&this.activeMidiDevice&&this.midiAccess.outputs.forEach(e=>{e.name===this.activeMidiDevice&&e.send(n)})}handlePatchChange(n){if(!this.activePatch)return;const{path:e,value:t}=n.detail,s={...this.activePatch};s.oscillators=[{...s.oscillators[0]},{...s.oscillators[1]}],s.filter={...s.filter},s.mixer={...s.mixer},s.envelopes=[{...s.envelopes[0]},{...s.envelopes[1]},{...s.envelopes[2]}];const i=e.split(".");let r=s;for(let a=0;a<i.length-1;a++)r=r[i[a]];r[i[i.length-1]]=t,this.activePatch=s;const o=d0(s);this.sendSysexCommand(o)}handleRequestDump(){const n=p0(0);this.sendSysexCommand(n)}handleLoadSlot(n){const e=n.detail.slot;this.midiAccess&&this.activeMidiDevice&&(this.midiAccess.outputs.forEach(t=>{t.name===this.activeMidiDevice&&t.send([192,e])}),setTimeout(()=>{this.handleRequestDump()},50))}disconnectMidiDevice(){this.activeMidiDevice=null,this.midiConnected=!1}loadDefaultProgression(){const n="Cmaj7 Am7 Dm7 G7",e=n.match(/[A-G](?:#{1,2}|b{1,2})?(?:[^\s,|/]+)?(?:\/[A-G](?:#{1,2}|b{1,2})?)?/g)||[],t=[];for(const s of e){const i=Ge(s);!i.empty&&i.notes.length>0&&t.push({symbol:s,tonic:i.tonic,quality:i.quality,notes:i.notes,intervals:i.intervals,aliases:i.aliases})}if(t.length>0){this.progression=t,this.source=n,this.activeIndex=0;const s=t[0],i=this.normalizeKey(s?.tonic)??this.config.key;this.originalKey=i;const o=s?.quality?.toLowerCase().includes("minor")||s?.symbol?.includes("m")?"minor":"major";this.config={...this.config,key:i,scale:o}}}render(){const n=this.getTransposedProgression(),e=n[this.activeIndex]??null,t=ao(e,this.config),s=co(e,t,this.voicing,this.inversion),i=e?e.notes.map(o=>ct(o)).filter(Boolean):[],r=e&&this.config.mode==="collapsed"?i.filter(o=>!t.some(a=>a.note===o)):[];return $`
       <div class="app-grid">
         <!-- Brand Header Bar -->
         <header class="brand-header">
@@ -1666,6 +1666,25 @@
             @chord-selected=${o=>this.onChordSelected(o)}
           ></progression-stepper>
         </footer>
+
+        <!-- 6. Bottom Links Footer -->
+        <footer class="app-links-footer">
+          <a href="https://github.com/warmsynths/circuit-chords" target="_blank" rel="noopener noreferrer" class="footer-link">
+            <svg class="footer-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+            GitHub
+          </a>
+          <span class="footer-divider">|</span>
+          <span class="footer-text">
+            Made with <span class="heart-icon">💖</span> by <a href="mailto:warmsynthsiloveyou@gmail.com" class="footer-link-highlight">warmsynths</a>
+          </span>
+          <span class="footer-divider">|</span>
+          <a href="https://ko-fi.com/warmsynths" target="_blank" rel="noopener noreferrer" class="footer-link">
+            <span class="coffee-icon">☕</span>
+            Support the Voyage
+          </a>
+        </footer>
       </div>
     `}playActiveVoicing(){const e=this.getTransposedProgression()[this.activeIndex]??null;if(!e)return;const t=ao(e,this.config),i=co(e,t,this.voicing,this.inversion).map(r=>t.find(o=>o.index===r.index)?.midiNote).filter(r=>!!r);i.length>0&&(Hg(i,.7,this.humanState),this.sendMidiNotes(i,700,this.humanState))}sendMidiNotes(n,e=700,t){if(!this.midiConnected||!this.activeMidiDevice||!this.midiAccess)return;let s=null;for(const a of this.midiAccess.outputs.values())if(a.name===this.activeMidiDevice){s=a;break}if(!s)return;const i=this.selectedMidiChannel-1&15,r=144|i,o=128|i;n.forEach((a,c)=>{const l=Wo(a);if(l===null)return;this.activeMidiTimeouts.has(l)&&clearTimeout(this.activeMidiTimeouts.get(l));let h=100,u=0,d=e;if(t){const{minVelocity:p,maxVelocity:f,spread:g,microTiming:_,humanVariance:w,duration:M}=t;h=Math.round(p+Math.random()*(f-p));const k=c*g*.1,v=(Math.random()-.5)*_*.05,y=(Math.random()-.5)*w*.03;u=Math.max(0,Math.round((k+v+y)*1e3)),d=Math.max(50,Math.round(M*1e3*(1+(Math.random()-.5)*.2*w)))}const m=setTimeout(()=>{try{s.send([r,l,h])}catch(f){console.warn("Failed to send MIDI Note On:",f)}const p=setTimeout(()=>{try{s.send([o,l,0])}catch{}this.activeMidiTimeouts.delete(l)},d);this.activeMidiTimeouts.set(l,p)},u);this.activeMidiTimeouts.set(l,m)})}onPadClicked(n){n.detail&&n.detail.midiNote&&this.sendMidiNotes([n.detail.midiNote],350)}onKeyChange(n){this.config={...this.config,key:n}}onScaleChange(n){const e=n==="chromatic"?"chromatic":"collapsed";this.config={...this.config,scale:n,mode:e}}onVoicingChange(n){this.voicing=n}onChordSelected(n){this.activeIndex=n.detail,this.autoPlay&&setTimeout(()=>this.playActiveVoicing(),20)}onParsed(n){this.progression=n.detail.progression,this.source=n.detail.source,this.activeIndex=0;const e=n.detail.progression[0],t=this.normalizeKey(e?.tonic)??this.config.key;this.originalKey=t;const i=e?.quality?.toLowerCase().includes("minor")||e?.symbol?.includes("m")?"minor":"major";e?.tonic&&(this.config={...this.config,key:t,scale:i}),this.autoPlay&&this.progression.length>0&&setTimeout(()=>this.playActiveVoicing(),50),this.progression.length>0&&(this.activeTab="grid")}getTransposedProgression(){if(this.progression.length===0)return[];if(!this.transposeProgression)return this.progression;const n=this.getKeyShiftSemitones();return n===0?this.progression:this.progression.map(e=>this.transposeParsedChord(e,n)).filter(e=>!!e)}getKeyShiftSemitones(){const n=Js.indexOf(this.originalKey),e=Js.indexOf(this.config.key);return n===-1||e===-1?0:(e-n+12)%12}transposeParsedChord(n,e){const t=this.transposeChordSymbol(n.symbol,e);if(!t)return null;const s=Ge(t);return s.empty||s.notes.length===0?null:{symbol:t,tonic:s.tonic,quality:s.quality,notes:s.notes,intervals:s.intervals,aliases:s.aliases}}transposeChordSymbol(n,e){const t=n.match(/^([A-G](?:#{1,2}|b{1,2})?)(.*?)(?:\/([A-G](?:#{1,2}|b{1,2})?))?$/);if(!t)return null;const s=this.transposeNoteName(t[1],e);if(!s)return null;const i=t[2]??"",r=t[3]?this.transposeNoteName(t[3],e):null;return t[3]&&!r?null:`${s}${i}${r?`/${r}`:""}`}transposeNoteName(n,e){const t=Ai(e),s=Ut(n,t);return this.normalizeKey(s)}normalizeKey(n){const e=On(n??"");if(!e)return null;const t=Si(e);return Js.includes(t)?t:null}};J.styles=Wt`
     :host {
@@ -1814,7 +1833,7 @@
     .app-grid {
       display: grid;
       grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
-      grid-template-rows: 48px var(--header-height) 1fr var(--footer-height);
+      grid-template-rows: 48px var(--header-height) 1fr var(--footer-height) auto;
       gap: var(--gap);
       height: calc(100vh - (var(--gap) * 2));
       height: calc(100dvh - (var(--gap) * 2));
@@ -2563,6 +2582,86 @@
       width: 100%;
     }
 
+    /* Section 6: Bottom Links Footer */
+    .app-links-footer {
+      grid-column: 1 / -1;
+      grid-row: 5 / 6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 8px 16px 0 16px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border-color);
+      margin-top: -4px;
+      flex-wrap: wrap;
+    }
+
+    .footer-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+    .footer-link:hover {
+      color: var(--accent-cyan);
+      transform: translateY(-1px);
+    }
+
+    .footer-link-highlight {
+      color: var(--text-primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+
+    .footer-link-highlight:hover {
+      color: var(--accent-cyan);
+      text-decoration: underline;
+    }
+
+    .footer-divider {
+      color: var(--border-color);
+      user-select: none;
+    }
+
+    .footer-icon {
+      flex-shrink: 0;
+      transition: stroke 0.2s ease;
+    }
+
+    .footer-link:hover .footer-icon {
+      stroke: var(--accent-cyan);
+    }
+
+    .heart-icon {
+      display: inline-block;
+      animation: heartPulse 2.5s infinite ease-in-out;
+      margin: 0 2px;
+    }
+
+    .coffee-icon {
+      display: inline-block;
+      transition: transform 0.2s ease;
+    }
+
+    .footer-link:hover .coffee-icon {
+      transform: rotate(10deg) scale(1.1);
+    }
+
+    @keyframes heartPulse {
+      0% { transform: scale(1); }
+      14% { transform: scale(1.15); }
+      28% { transform: scale(1); }
+      42% { transform: scale(1.15); }
+      70% { transform: scale(1); }
+    }
+
     /* Close Button (Global for Modal and Drawer) */
     .close-btn {
       display: flex;
@@ -2685,7 +2784,7 @@
 
       .app-grid {
         grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
-        grid-template-rows: 48px var(--header-height) 1fr var(--footer-height);
+        grid-template-rows: 48px var(--header-height) 1fr var(--footer-height) auto;
         gap: var(--gap);
         height: calc(100vh - (var(--gap) * 2));
         height: calc(100dvh - (var(--gap) * 2));
