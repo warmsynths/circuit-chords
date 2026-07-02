@@ -1,4 +1,4 @@
-import { LitElement, css, html } from 'lit';
+import { LitElement, css, html, svg } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { Chord, Interval, Note } from 'tonal';
 import './chord-input';
@@ -9,12 +9,11 @@ import {
   KEY_OPTIONS,
   SCALE_DISPLAY_NAMES,
   SCALE_OPTIONS,
-  VOICING_OPTIONS,
-  buildChordRecipe,
   buildCircuitGrid,
   normalizePitchClass,
   type GridConfig,
-  type VoicingMode,
+  type CircuitPad,
+  type ChordRecipePad,
 } from '../lib/music-grid';
 import { playChord, isAudioActive, startAudio, suspendAudio, registerAudioStateListener } from '../lib/audio';
 import { PatchData, decodePatchDump, createRequestDumpCommand, encodePatchDump, PATCH_BYTES } from '../lib/circuit-sysex';
@@ -29,6 +28,9 @@ export class CircuitChordForge extends LitElement {
       --bg-onyx: #121316;
       --bg-charcoal: #1a1b20;
       --bg-charcoal-alpha: rgba(26, 27, 32, 0.85);
+      --kb-white-key-bg: #8b8e98;
+      --kb-black-key-bg: #121316;
+      --kb-stroke: #121316;
       --radius-panel: 12px;
       
       --text-primary: #ffffff;
@@ -97,6 +99,9 @@ export class CircuitChordForge extends LitElement {
       --bg-onyx: #5c5f66;          /* Darker slate grey chassis edges */
       --bg-charcoal: #82858d;      /* Medium slate grey faceplate */
       --bg-charcoal-alpha: rgba(130, 133, 141, 0.85);
+      --kb-white-key-bg: #cbd5e1;
+      --kb-black-key-bg: #2e3035;
+      --kb-stroke: #5c5f66;
       
       --text-primary: #121316;     /* Black printed text */
       --text-secondary: #2e3035;   /* Dark gray labels */
@@ -1307,6 +1312,98 @@ export class CircuitChordForge extends LitElement {
         display: none !important;
       }
     }
+
+    /* Voicing Keyboard & Control Styles */
+    .voicing-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .voicing-control-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .keyboard-viz-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-charcoal);
+      padding: 2px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      width: 224px; /* default fallback, overridden dynamically */
+      height: 46px;
+      cursor: pointer;
+      user-select: none;
+      touch-action: none;
+      box-shadow: var(--shadow-inset);
+      transition: border-color 0.2s ease;
+    }
+
+    .keyboard-viz-container:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .voicing-keyboard {
+      background: transparent;
+    }
+
+    .voicing-keyboard rect.white-key {
+      fill: var(--kb-white-key-bg, #8b8e98);
+      stroke: var(--kb-stroke, #121316);
+      stroke-width: 0.75px;
+      cursor: pointer;
+      transition: fill 0.15s ease;
+    }
+
+    .voicing-keyboard rect.white-key.active {
+      fill: var(--accent-cyan);
+      stroke: var(--accent-cyan);
+    }
+
+    .voicing-keyboard rect.black-key {
+      fill: var(--kb-black-key-bg, #121316);
+      stroke: var(--kb-stroke, #121316);
+      stroke-width: 0.75px;
+      cursor: pointer;
+      transition: fill 0.15s ease;
+    }
+
+    .voicing-keyboard rect.black-key.active {
+      fill: var(--accent-cyan);
+      stroke: var(--accent-cyan);
+    }
+
+    .voicing-keyboard text.keyboard-label {
+      fill: var(--accent-cyan);
+      font-size: 7px;
+      font-weight: 800;
+      pointer-events: none;
+      text-shadow: 0 0 4px var(--accent-cyan-alpha);
+    }
+
+    .relocated-audio-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .relocated-audio-controls .audio-btn {
+      border-radius: 6px;
+      width: 32px;
+      height: 32px;
+      background: var(--bg-charcoal);
+      box-shadow: var(--pad-shadow);
+    }
+
+    @media (max-width: 520px) {
+      .voicing-group {
+        gap: 2px;
+      }
+    }
   `;
 
   // === State Variables ===
@@ -1324,8 +1421,19 @@ export class CircuitChordForge extends LitElement {
     scale: 'minor',
     mode: 'collapsed',
   };
-  @state() private voicing: VoicingMode = 'triad';
+  @state() private voicedOffsets: Record<number, number[]> = {};
+  @state() private isMobileViewport = false;
+  
+  // Voicing drag-to-change state
+  private isDraggingVoicing = false;
+  private dragStartX = 0;
+  private hasMovedVoicing = false;
+  private playDebounceTimeout: any = null;
   @state() private autoPlay = true;
+
+  private handleResize = () => {
+    this.isMobileViewport = window.innerWidth < 520;
+  };
   @state() private transposeProgression = true;
   @state() private inversion = 0;
   @state() private source = '';
@@ -1458,11 +1566,19 @@ export class CircuitChordForge extends LitElement {
     this.audioCleanup = registerAudioStateListener((state) => {
       this.audioActive = state === 'running';
     });
+
+    if (typeof window !== 'undefined') {
+      this.isMobileViewport = window.innerWidth < 520;
+      window.addEventListener('resize', this.handleResize);
+    }
   }
 
   disconnectedCallback() {
     if (this.audioCleanup) {
       this.audioCleanup();
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', this.handleResize);
     }
     super.disconnectedCallback();
   }
@@ -1633,6 +1749,7 @@ export class CircuitChordForge extends LitElement {
       this.progression = parsed;
       this.source = defaultSource;
       this.activeIndex = 0;
+      this.initVoicedOffsets();
       const firstChord = parsed[0];
       const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
       this.originalKey = baseKey;
@@ -1642,11 +1759,300 @@ export class CircuitChordForge extends LitElement {
     }
   }
 
+
+  private initVoicedOffsets() {
+    const newOffsets: Record<number, number[]> = {};
+    this.progression.forEach((chord, i) => {
+      newOffsets[i] = this.getDefaultVoicedOffsets(chord);
+    });
+    this.voicedOffsets = newOffsets;
+  }
+
+  private getDefaultVoicedOffsets(chord: ParsedChord): number[] {
+    const baseIntervals = chord.intervals
+      .map((inv) => Interval.get(inv).semitones)
+      .filter((val): val is number => typeof val === 'number');
+    return baseIntervals.sort((a, b) => a - b);
+  }
+
+  private shiftVoicingInversion(offsets: number[], steps: number): number[] {
+    if (offsets.length === 0) return [];
+    let current = [...offsets].sort((a, b) => a - b);
+    
+    if (steps > 0) {
+      for (let i = 0; i < steps; i++) {
+        const lowest = current.shift()!;
+        current.push(lowest + 12);
+        current.sort((a, b) => a - b);
+      }
+    } else if (steps < 0) {
+      for (let i = 0; i < Math.abs(steps); i++) {
+        const highest = current.pop()!;
+        current.unshift(highest - 12);
+        current.sort((a, b) => a - b);
+      }
+    }
+    
+    const rootMidi = Note.midi((this.getTransposedProgression()[this.activeIndex]?.tonic ?? 'C') + '4') ?? 60;
+    const minMidi = this.isMobileViewport ? 60 : 48;
+    const minOffset = minMidi - rootMidi;
+    const maxOffset = 84 - rootMidi;
+    
+    current = current.map(o => {
+      let bounded = o;
+      while (bounded < minOffset) bounded += 12;
+      while (bounded > maxOffset) bounded -= 12;
+      return bounded;
+    }).sort((a, b) => a - b);
+    
+    return Array.from(new Set(current));
+  }
+
+  private onKeyboardPointerDown(e: PointerEvent) {
+    const containerEl = e.currentTarget as HTMLElement;
+    containerEl.setPointerCapture(e.pointerId);
+    this.isDraggingVoicing = true;
+    this.dragStartX = e.clientX;
+    this.hasMovedVoicing = false;
+    e.preventDefault();
+  }
+
+  private onKeyboardPointerMove(e: PointerEvent) {
+    if (!this.isDraggingVoicing) return;
+    const deltaX = e.clientX - this.dragStartX;
+    if (Math.abs(deltaX) > 4) {
+      this.hasMovedVoicing = true;
+    }
+    const stepSize = 15;
+    const stepDiff = Math.round(deltaX / stepSize);
+    
+    if (stepDiff !== 0) {
+      this.dragStartX = e.clientX;
+      const current = this.voicedOffsets[this.activeIndex] || [];
+      if (current.length > 0) {
+        const updated = this.shiftVoicingInversion(current, stepDiff);
+        this.voicedOffsets = {
+          ...this.voicedOffsets,
+          [this.activeIndex]: updated
+        };
+        if (this.autoPlay) {
+          this.playActiveVoicingDebounced();
+        }
+      }
+    }
+  }
+
+  private onKeyboardPointerUp(e: PointerEvent) {
+    if (!this.isDraggingVoicing) return;
+    this.isDraggingVoicing = false;
+    const containerEl = e.currentTarget as HTMLElement;
+    try {
+      containerEl.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+
+    if (!this.hasMovedVoicing) {
+      const target = e.target as SVGElement;
+      if (target.tagName === 'rect') {
+        const midiAttr = target.getAttribute('data-midi');
+        if (midiAttr) {
+          const clickedMidi = Number(midiAttr);
+          const activeChord = this.getTransposedProgression()[this.activeIndex] ?? null;
+          if (activeChord) {
+            const rootMidi = Note.midi((activeChord.tonic ?? 'C') + '4') ?? 60;
+            const offset = clickedMidi - rootMidi;
+            
+            const current = [...(this.voicedOffsets[this.activeIndex] || [])];
+            const index = current.indexOf(offset);
+            if (index !== -1) {
+              current.splice(index, 1);
+            } else {
+              if (current.length < 6) {
+                current.push(offset);
+              }
+            }
+            this.voicedOffsets = {
+              ...this.voicedOffsets,
+              [this.activeIndex]: current.sort((a, b) => a - b)
+            };
+
+            if (this.autoPlay) {
+              this.playActiveVoicingDebounced();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private playActiveVoicingDebounced() {
+    if (this.playDebounceTimeout) {
+      clearTimeout(this.playDebounceTimeout);
+    }
+    this.playDebounceTimeout = setTimeout(() => {
+      this.playActiveVoicing();
+    }, 80);
+  }
+
+  private onKeyboardWheel(e: WheelEvent) {
+    e.preventDefault();
+    const stepDiff = e.deltaY > 0 ? -1 : 1;
+    const current = this.voicedOffsets[this.activeIndex] || [];
+    if (current.length > 0) {
+      const updated = this.shiftVoicingInversion(current, stepDiff);
+      this.voicedOffsets = {
+        ...this.voicedOffsets,
+        [this.activeIndex]: updated
+      };
+      if (this.autoPlay) {
+        this.playActiveVoicingDebounced();
+      }
+    }
+  }
+
+  private renderVoicingKeyboard() {
+    const transposedProgression = this.getTransposedProgression();
+    const activeChord = transposedProgression[this.activeIndex] ?? null;
+    const rootMidi = activeChord ? (Note.midi((activeChord.tonic ?? 'C') + '4') ?? 60) : 60;
+    
+    const activeMidis = (this.voicedOffsets[this.activeIndex] || []).map(offset => rootMidi + offset);
+    
+    const isMobile = this.isMobileViewport;
+    
+    // White key MIDI notes mapping: C4 to C6 on mobile, C3 to C6 otherwise
+    const whiteKeys = isMobile ? [
+      60, 62, 64, 65, 67, 69, 71, // Octave 1
+      72, 74, 76, 77, 79, 81, 83, // Octave 2
+      84                          // Octave 3 C
+    ] : [
+      48, 50, 52, 53, 55, 57, 59, // Octave 0
+      60, 62, 64, 65, 67, 69, 71, // Octave 1
+      72, 74, 76, 77, 79, 81, 83, // Octave 2
+      84                          // Octave 3 C
+    ];
+
+    // Black key MIDI notes and their preceding white key indexes
+    const blackKeys = isMobile ? [
+      { midi: 61, afterIdx: 0 },
+      { midi: 63, afterIdx: 1 },
+      { midi: 66, afterIdx: 3 },
+      { midi: 68, afterIdx: 4 },
+      { midi: 70, afterIdx: 5 },
+      
+      { midi: 73, afterIdx: 7 },
+      { midi: 75, afterIdx: 8 },
+      { midi: 78, afterIdx: 10 },
+      { midi: 80, afterIdx: 11 },
+      { midi: 82, afterIdx: 12 }
+    ] : [
+      { midi: 49, afterIdx: 0 },
+      { midi: 51, afterIdx: 1 },
+      { midi: 54, afterIdx: 3 },
+      { midi: 56, afterIdx: 4 },
+      { midi: 58, afterIdx: 5 },
+      
+      { midi: 61, afterIdx: 7 },
+      { midi: 63, afterIdx: 8 },
+      { midi: 66, afterIdx: 10 },
+      { midi: 68, afterIdx: 11 },
+      { midi: 70, afterIdx: 12 },
+      
+      { midi: 73, afterIdx: 14 },
+      { midi: 75, afterIdx: 15 },
+      { midi: 78, afterIdx: 17 },
+      { midi: 80, afterIdx: 18 },
+      { midi: 82, afterIdx: 19 }
+    ];
+
+    const width = isMobile ? 150 : 220;
+    const containerWidth = isMobile ? 154 : 224;
+
+    return html`
+      <div 
+        class="keyboard-viz-container"
+        style="width: ${containerWidth}px;"
+        @pointerdown=${(e: PointerEvent) => this.onKeyboardPointerDown(e)}
+        @pointermove=${(e: PointerEvent) => this.onKeyboardPointerMove(e)}
+        @pointerup=${(e: PointerEvent) => this.onKeyboardPointerUp(e)}
+        @pointercancel=${(e: PointerEvent) => this.onKeyboardPointerUp(e)}
+        @wheel=${(e: WheelEvent) => this.onKeyboardWheel(e)}
+      >
+        <svg class="voicing-keyboard" width="${width}" height="42" viewBox="0 0 ${width} 42">
+          <!-- 1. Render White Keys -->
+          ${whiteKeys.map((midi, i) => {
+            const x = i * 10;
+            const isActive = activeMidis.includes(midi);
+            return svg`
+              <rect 
+                x="${x}" 
+                y="2" 
+                width="9.2" 
+                height="28" 
+                rx="1" 
+                class="white-key ${isActive ? 'active' : ''}"
+                data-midi="${midi}"
+              />
+            `;
+          })}
+
+          <!-- 2. Render Black Keys -->
+          ${blackKeys.map(({ midi, afterIdx }) => {
+            const x = (afterIdx + 1) * 10 - 3.2;
+            const isActive = activeMidis.includes(midi);
+            return svg`
+              <rect 
+                x="${x}" 
+                y="2" 
+                width="6.4" 
+                height="18" 
+                rx="0.5" 
+                class="black-key ${isActive ? 'active' : ''}"
+                data-midi="${midi}"
+              />
+            `;
+          })}
+
+          <!-- 3. Render note labels under active keys -->
+          ${activeMidis.map(midi => {
+            const wIdx = whiteKeys.indexOf(midi);
+            let labelX = 0;
+            if (wIdx !== -1) {
+              labelX = wIdx * 10 + 4.6;
+            } else {
+              const bk = blackKeys.find(b => b.midi === midi);
+              if (bk) {
+                labelX = (bk.afterIdx + 1) * 10;
+              }
+            }
+            const noteName = Note.pitchClass(Note.fromMidi(midi));
+            return svg`
+              <text x="${labelX}" y="39" text-anchor="middle" class="keyboard-label">
+                ${noteName}
+              </text>
+            `;
+          })}
+        </svg>
+      </div>
+    `;
+  }
+
   render() {
     const transposedProgression = this.getTransposedProgression();
     const activeChord = transposedProgression[this.activeIndex] ?? null;
     const pads = buildCircuitGrid(activeChord, this.config);
-    const recipe = buildChordRecipe(activeChord, pads, this.voicing, this.inversion);
+    
+    // Construct active recipe pads from voicedOffsets
+    const rootMidi = activeChord ? (Note.midi((activeChord.tonic ?? 'C') + '4') ?? 60) : 60;
+    const activeOffsets = this.voicedOffsets[this.activeIndex] || [];
+    const recipe = activeOffsets.map(offset => {
+      const noteName = Note.fromMidi(rootMidi + offset);
+      const pad = pads.find(p => p.midiNote === noteName);
+      if (pad) {
+        return { note: pad.note, row: pad.row, col: pad.col, index: pad.index };
+      }
+      return null;
+    }).filter((r): r is ChordRecipePad => r !== null);
 
     const uniqueTargets = activeChord ? activeChord.notes.map(n => normalizePitchClass(n)).filter(Boolean) : [];
     const missingNotes = activeChord && this.config.mode === 'collapsed'
@@ -1669,30 +2075,6 @@ export class CircuitChordForge extends LitElement {
             <div class="brand-title">circuit chords</div>
           </div>
           <div class="brand-right">
-            <!-- Audio State Button -->
-            <button class="audio-btn ${this.audioActive ? 'active' : ''}" @click=${this.toggleAudio} title="${this.audioActive ? 'Disable Audio' : 'Enable Audio'}">
-              ${this.audioActive ? html`
-                <svg viewBox="0 0 24 24">
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                </svg>
-              ` : html`
-                <svg viewBox="0 0 24 24">
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                  <line x1="23" y1="9" x2="17" y2="15"></line>
-                  <line x1="17" y1="9" x2="23" y2="15"></line>
-                </svg>
-              `}
-            </button>
-            <!-- Human toggle Button -->
-            ${this.humanLoaded ? html`
-              <button class="audio-btn ${this.showHuman ? 'active' : ''}" @click=${this.toggleHuman} title="Toggle Human Settings">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-              </button>
-            ` : null}
             <!-- Theme Toggle Button -->
             <button class="audio-btn theme-toggle-btn" @click=${this.toggleTheme} title="${this.theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}">
               ${this.theme === 'dark' ? html`
@@ -1765,17 +2147,46 @@ export class CircuitChordForge extends LitElement {
 
           <div style="flex:1;"></div>
 
-          <div class="config-group">
+          <div class="config-group voicing-group">
             <span class="config-label">Voicing</span>
-            <div class="tactile-group">
-              ${VOICING_OPTIONS.map((v) => html`
-                <button
-                  class="tactile-btn ${this.voicing === v ? 'active-root' : ''}"
-                  @click=${() => this.onVoicingChange(v as VoicingMode)}
-                  title="Voicing: ${v}">
-                  ${v === 'triad' ? '3' : v === 'seventh' ? '7th' : v}
+            <div class="voicing-control-row">
+              ${this.renderVoicingKeyboard()}
+
+              <div class="relocated-audio-controls">
+                <!-- Audio State Button (Mute) -->
+                <button 
+                  class="audio-btn ${this.audioActive ? 'active' : ''}" 
+                  @click=${this.toggleAudio} 
+                  title="${this.audioActive ? 'Disable Audio' : 'Enable Audio'}"
+                >
+                  ${this.audioActive ? html`
+                    <svg viewBox="0 0 24 24">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                    </svg>
+                  ` : html`
+                    <svg viewBox="0 0 24 24">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                      <line x1="23" y1="9" x2="17" y2="15"></line>
+                      <line x1="17" y1="9" x2="23" y2="15"></line>
+                    </svg>
+                  `}
                 </button>
-              `)}
+
+                <!-- Human toggle Button -->
+                ${this.humanLoaded ? html`
+                  <button 
+                    class="audio-btn ${this.showHuman ? 'active' : ''}" 
+                    @click=${this.toggleHuman} 
+                    title="Toggle Human Settings"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </button>
+                ` : null}
+              </div>
             </div>
           </div>
         </header>
@@ -2115,11 +2526,13 @@ export class CircuitChordForge extends LitElement {
     const activeChord = transposedProgression[this.activeIndex] ?? null;
     if (!activeChord) return;
 
-    const pads = buildCircuitGrid(activeChord, this.config);
-    const recipe = buildChordRecipe(activeChord, pads, this.voicing, this.inversion);
-    const midiNotes = recipe
-      .map((rPad) => pads.find((p) => p.index === rPad.index)?.midiNote)
-      .filter((note): note is string => Boolean(note));
+    let offsets = this.voicedOffsets[this.activeIndex] || [];
+    if (offsets.length === 0) {
+      offsets = this.getDefaultVoicedOffsets(activeChord);
+    }
+
+    const rootMidi = Note.midi((activeChord.tonic ?? 'C') + '4') ?? 60;
+    const midiNotes = offsets.map(o => Note.fromMidi(rootMidi + o)).filter((n): n is string => n !== null);
 
     if (midiNotes.length > 0) {
       playChord(midiNotes, 0.7, this.humanState);
@@ -2208,9 +2621,7 @@ export class CircuitChordForge extends LitElement {
     this.config = { ...this.config, scale, mode };
   }
 
-  private onVoicingChange(voicing: VoicingMode) {
-    this.voicing = voicing;
-  }
+
 
   private onChordSelected(event: CustomEvent<number>) {
     this.activeIndex = event.detail;
@@ -2223,6 +2634,7 @@ export class CircuitChordForge extends LitElement {
     this.progression = event.detail.progression;
     this.source = event.detail.source;
     this.activeIndex = 0;
+    this.initVoicedOffsets();
 
     const firstChord = event.detail.progression[0];
     const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
