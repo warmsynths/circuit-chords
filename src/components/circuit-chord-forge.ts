@@ -4,7 +4,8 @@ import { Chord, Interval, Note } from 'tonal';
 import './chord-input';
 import './progression-stepper';
 import './circuit-grid';
-import type { ChordInputParsedEventDetail, ParsedChord } from './chord-input';
+import type { ChordInputParsedEventDetail } from './chord-input';
+import { parseProgression, type ParsedChord } from '../lib/chord-parser';
 import {
   KEY_OPTIONS,
   SCALE_DISPLAY_NAMES,
@@ -1511,7 +1512,7 @@ export class CircuitChordForge extends LitElement {
   @state() private showQualitySelector = false;
   private hasSeenDrawerPeek = localStorage.getItem('circuit-chords.drawerPeekSeen') === 'true';
   private peekTimeout: ReturnType<typeof setTimeout> | null = null;
-  
+
   // Voicing drag-to-change state
   private isDraggingVoicing = false;
   private dragStartX = 0;
@@ -1865,7 +1866,7 @@ export class CircuitChordForge extends LitElement {
   private shiftVoicingInversion(offsets: number[], steps: number): number[] {
     if (offsets.length === 0) return [];
     let current = [...offsets].sort((a, b) => a - b);
-    
+
     if (steps > 0) {
       for (let i = 0; i < steps; i++) {
         const lowest = current.shift()!;
@@ -1879,19 +1880,19 @@ export class CircuitChordForge extends LitElement {
         current.sort((a, b) => a - b);
       }
     }
-    
+
     const rootMidi = Note.midi((this.getTransposedProgression()[this.activeIndex]?.tonic ?? 'C') + '4') ?? 60;
     const minMidi = this.isMobileViewport ? 60 : 48;
     const minOffset = minMidi - rootMidi;
     const maxOffset = 84 - rootMidi;
-    
+
     current = current.map(o => {
       let bounded = o;
       while (bounded < minOffset) bounded += 12;
       while (bounded > maxOffset) bounded -= 12;
       return bounded;
     }).sort((a, b) => a - b);
-    
+
     return Array.from(new Set(current));
   }
 
@@ -1912,7 +1913,7 @@ export class CircuitChordForge extends LitElement {
     }
     const stepSize = 15;
     const stepDiff = Math.round(deltaX / stepSize);
-    
+
     if (stepDiff !== 0) {
       this.dragStartX = e.clientX;
       const current = this.voicedOffsets[this.activeIndex] || [];
@@ -1949,7 +1950,7 @@ export class CircuitChordForge extends LitElement {
           if (activeChord) {
             const rootMidi = Note.midi((activeChord.tonic ?? 'C') + '4') ?? 60;
             const offset = clickedMidi - rootMidi;
-            
+
             const current = [...(this.voicedOffsets[this.activeIndex] || [])];
             const index = current.indexOf(offset);
             if (index !== -1) {
@@ -2002,11 +2003,11 @@ export class CircuitChordForge extends LitElement {
     const transposedProgression = this.getTransposedProgression();
     const activeChord = transposedProgression[this.activeIndex] ?? null;
     const rootMidi = activeChord ? (Note.midi((activeChord.tonic ?? 'C') + '4') ?? 60) : 60;
-    
+
     const activeMidis = (this.voicedOffsets[this.activeIndex] || []).map(offset => rootMidi + offset);
-    
+
     const isMobile = this.isMobileViewport;
-    
+
     // White key MIDI notes mapping: C4 to C6 on mobile, C3 to C6 otherwise
     const whiteKeys = isMobile ? [
       60, 62, 64, 65, 67, 69, 71, // Octave 1
@@ -2026,7 +2027,7 @@ export class CircuitChordForge extends LitElement {
       { midi: 66, afterIdx: 3 },
       { midi: 68, afterIdx: 4 },
       { midi: 70, afterIdx: 5 },
-      
+
       { midi: 73, afterIdx: 7 },
       { midi: 75, afterIdx: 8 },
       { midi: 78, afterIdx: 10 },
@@ -2038,13 +2039,13 @@ export class CircuitChordForge extends LitElement {
       { midi: 54, afterIdx: 3 },
       { midi: 56, afterIdx: 4 },
       { midi: 58, afterIdx: 5 },
-      
+
       { midi: 61, afterIdx: 7 },
       { midi: 63, afterIdx: 8 },
       { midi: 66, afterIdx: 10 },
       { midi: 68, afterIdx: 11 },
       { midi: 70, afterIdx: 12 },
-      
+
       { midi: 73, afterIdx: 14 },
       { midi: 75, afterIdx: 15 },
       { midi: 78, afterIdx: 17 },
@@ -2068,9 +2069,9 @@ export class CircuitChordForge extends LitElement {
         <svg class="voicing-keyboard" width="${width}" height="42" viewBox="0 0 ${width} 42">
           <!-- 1. Render White Keys -->
           ${whiteKeys.map((midi, i) => {
-            const x = i * 10;
-            const isActive = activeMidis.includes(midi);
-            return svg`
+      const x = i * 10;
+      const isActive = activeMidis.includes(midi);
+      return svg`
               <rect 
                 x="${x}" 
                 y="2" 
@@ -2081,13 +2082,13 @@ export class CircuitChordForge extends LitElement {
                 data-midi="${midi}"
               />
             `;
-          })}
+    })}
 
           <!-- 2. Render Black Keys -->
           ${blackKeys.map(({ midi, afterIdx }) => {
-            const x = (afterIdx + 1) * 10 - 3.2;
-            const isActive = activeMidis.includes(midi);
-            return svg`
+      const x = (afterIdx + 1) * 10 - 3.2;
+      const isActive = activeMidis.includes(midi);
+      return svg`
               <rect 
                 x="${x}" 
                 y="2" 
@@ -2098,27 +2099,27 @@ export class CircuitChordForge extends LitElement {
                 data-midi="${midi}"
               />
             `;
-          })}
+    })}
 
           <!-- 3. Render note labels under active keys -->
           ${activeMidis.map(midi => {
-            const wIdx = whiteKeys.indexOf(midi);
-            let labelX = 0;
-            if (wIdx !== -1) {
-              labelX = wIdx * 10 + 4.6;
-            } else {
-              const bk = blackKeys.find(b => b.midi === midi);
-              if (bk) {
-                labelX = (bk.afterIdx + 1) * 10;
-              }
-            }
-            const noteName = Note.pitchClass(Note.fromMidi(midi));
-            return svg`
+      const wIdx = whiteKeys.indexOf(midi);
+      let labelX = 0;
+      if (wIdx !== -1) {
+        labelX = wIdx * 10 + 4.6;
+      } else {
+        const bk = blackKeys.find(b => b.midi === midi);
+        if (bk) {
+          labelX = (bk.afterIdx + 1) * 10;
+        }
+      }
+      const noteName = Note.pitchClass(Note.fromMidi(midi));
+      return svg`
               <text x="${labelX}" y="39" text-anchor="middle" class="keyboard-label">
                 ${noteName}
               </text>
             `;
-          })}
+    })}
         </svg>
       </div>
     `;
@@ -2128,7 +2129,7 @@ export class CircuitChordForge extends LitElement {
     const transposedProgression = this.getTransposedProgression();
     const activeChord = transposedProgression[this.activeIndex] ?? null;
     const pads = buildCircuitGrid(activeChord, this.config);
-    
+
     // Construct active recipe pads from voicedOffsets
     const rootMidi = activeChord ? (Note.midi((activeChord.tonic ?? 'C') + '4') ?? 60) : 60;
     const activeOffsets = this.voicedOffsets[this.activeIndex] || [];
@@ -2576,24 +2577,24 @@ export class CircuitChordForge extends LitElement {
               </div>
               <div class="quality-selector-row">
                 ${[
-                  { label: 'maj7', value: 'maj7' },
-                  { label: 'm7', value: 'm7' },
-                  { label: '7', value: '7' },
-                  { label: 'm7b5', value: 'm7b5' },
-                  { label: 'dim7', value: 'dim7' },
-                  { label: 'sus4', value: 'sus4' },
-                  { label: '9', value: '9' },
-                  { label: 'maj', value: 'maj' },
-                  { label: 'm', value: 'm' }
-                ].map(q => {
-                  const activeChord = this.progression[this.activeIndex];
-                  let isActive = false;
-                  if (activeChord && activeChord.tonic) {
-                    const suffix = activeChord.symbol.slice(activeChord.tonic.length);
-                    const qSuffix = q.value === 'maj' ? '' : q.value;
-                    isActive = suffix === qSuffix;
-                  }
-                  return html`
+          { label: 'maj7', value: 'maj7' },
+          { label: 'm7', value: 'm7' },
+          { label: '7', value: '7' },
+          { label: 'm7b5', value: 'm7b5' },
+          { label: 'dim7', value: 'dim7' },
+          { label: 'sus4', value: 'sus4' },
+          { label: '9', value: '9' },
+          { label: 'maj', value: 'maj' },
+          { label: 'm', value: 'm' }
+        ].map(q => {
+          const activeChord = this.progression[this.activeIndex];
+          let isActive = false;
+          if (activeChord && activeChord.tonic) {
+            const suffix = activeChord.symbol.slice(activeChord.tonic.length);
+            const qSuffix = q.value === 'maj' ? '' : q.value;
+            isActive = suffix === qSuffix;
+          }
+          return html`
                     <button 
                       class="quality-pill ${isActive ? 'active' : ''}"
                       @click=${() => this.changeActiveChordQuality(q.value)}
@@ -2601,7 +2602,7 @@ export class CircuitChordForge extends LitElement {
                       ${q.label}
                     </button>
                   `;
-                })}
+        })}
               </div>
             </div>
           ` : null}
@@ -2645,7 +2646,7 @@ export class CircuitChordForge extends LitElement {
     const tonic = activeChord.tonic || 'C';
     const suffix = qualityValue === 'maj' ? '' : qualityValue;
     const newSymbol = `${tonic}${suffix}`;
-    
+
     const parsed = Chord.get(newSymbol);
     if (!parsed.empty && parsed.notes.length > 0) {
       const updatedChord: ParsedChord = {
@@ -2656,11 +2657,11 @@ export class CircuitChordForge extends LitElement {
         intervals: parsed.intervals,
         aliases: parsed.aliases
       };
-      
+
       const nextProgression = [...this.progression];
       nextProgression[this.activeIndex] = updatedChord;
       this.progression = nextProgression;
-      
+
       this.voicedOffsets = {
         ...this.voicedOffsets,
         [this.activeIndex]: this.getDefaultVoicedOffsets(updatedChord)

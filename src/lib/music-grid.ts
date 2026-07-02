@@ -1,5 +1,5 @@
 import { Note, Scale, Interval } from 'tonal';
-import type { ParsedChord } from '../components/chord-input';
+import type { ParsedChord } from './chord-parser';
 
 /** Grid display mode for note assignment. */
 export type ScaleMode = 'collapsed' | 'chromatic';

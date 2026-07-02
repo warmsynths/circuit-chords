@@ -9,7 +9,11 @@
     "useDefineForClassFields": false,
     "lib": ["ES2022", "DOM"],
     "types": ["vite/client"],
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "human-engine": ["src/custom.d.ts"]
+    }
   },
   "include": ["src"]
 }
