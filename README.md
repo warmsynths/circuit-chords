@@ -1,5 +1,7 @@
 # Circuit Chords
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 Map chord progressions to playable pad voicings for Novation Circuit Tracks and Rhythm.
 
 ![Circuit Chord Forge](public/screenshot.png)
@@ -80,3 +82,7 @@ Deployment steps:
 - Main pad grid stays visible first to reduce scrolling.
 - In `Scale Collapse`, non-scale chord tones may be hidden; app warns when this happens.
 - Hardware state (WebMIDI) updates actively when connected.
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
