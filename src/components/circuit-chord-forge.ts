@@ -1,4 +1,4 @@
-import { LitElement, css, html } from 'lit';
+import { LitElement, css, html, svg } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { Chord, Interval, Note } from 'tonal';
 import './chord-input';
@@ -10,12 +10,11 @@ import {
   KEY_OPTIONS,
   SCALE_DISPLAY_NAMES,
   SCALE_OPTIONS,
-  VOICING_OPTIONS,
-  buildChordRecipe,
   buildCircuitGrid,
   normalizePitchClass,
   type GridConfig,
-  type VoicingMode,
+  type CircuitPad,
+  type ChordRecipePad,
 } from '../lib/music-grid';
 import { playChord, isAudioActive, startAudio, suspendAudio, registerAudioStateListener } from '../lib/audio';
 import { PatchData, decodePatchDump, createRequestDumpCommand, encodePatchDump, PATCH_BYTES } from '../lib/circuit-sysex';
@@ -30,6 +29,9 @@ export class CircuitChordForge extends LitElement {
       --bg-onyx: #121316;
       --bg-charcoal: #1a1b20;
       --bg-charcoal-alpha: rgba(26, 27, 32, 0.85);
+      --kb-white-key-bg: #8b8e98;
+      --kb-black-key-bg: #121316;
+      --kb-stroke: #121316;
       --radius-panel: 12px;
       
       --text-primary: #ffffff;
@@ -98,6 +100,9 @@ export class CircuitChordForge extends LitElement {
       --bg-onyx: #5c5f66;          /* Darker slate grey chassis edges */
       --bg-charcoal: #82858d;      /* Medium slate grey faceplate */
       --bg-charcoal-alpha: rgba(130, 133, 141, 0.85);
+      --kb-white-key-bg: #cbd5e1;
+      --kb-black-key-bg: #2e3035;
+      --kb-stroke: #5c5f66;
       
       --text-primary: #121316;     /* Black printed text */
       --text-secondary: #2e3035;   /* Dark gray labels */
@@ -170,7 +175,7 @@ export class CircuitChordForge extends LitElement {
     .app-grid {
       display: grid;
       grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
-      grid-template-rows: 48px var(--header-height) 1fr var(--footer-height);
+      grid-template-rows: 48px var(--header-height) 1fr minmax(var(--footer-height), auto) auto;
       gap: var(--gap);
       height: calc(100vh - (var(--gap) * 2));
       height: calc(100dvh - (var(--gap) * 2));
@@ -911,12 +916,177 @@ export class CircuitChordForge extends LitElement {
       grid-column: 2 / -1;
       grid-row: 4 / 5;
       display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+      height: auto !important;
+      padding: 8px 24px;
+    }
+
+    .footer-drawer-content {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .footer-voicing-row {
+      display: flex;
       align-items: center;
-      padding: 0 24px;
+      gap: 12px;
+    }
+
+    .footer-voicing-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .quality-selector-row {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      width: 100%;
+      padding-bottom: 2px;
+      margin-bottom: 2px;
+    }
+
+    .quality-selector-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .quality-pill {
+      background: var(--bg-charcoal);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .quality-pill:hover {
+      border-color: var(--text-primary);
+      color: var(--text-primary);
+    }
+
+    .quality-pill.active {
+      background: var(--bg-charcoal);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan-alpha);
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .footer-timeline.peek-hint {
+      animation: peekPulse 1.5s ease;
+    }
+
+    @keyframes peekPulse {
+      0% { box-shadow: none; }
+      30% { box-shadow: 0 0 12px var(--accent-cyan-alpha), inset 0 0 8px rgba(0, 240, 255, 0.05); }
+      100% { box-shadow: none; }
     }
 
     progression-stepper {
       width: 100%;
+    }
+
+    /* Section 6: Bottom Links Footer */
+    .app-links-footer {
+      grid-column: 1 / -1;
+      grid-row: 5 / 6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 8px 16px 0 16px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border-color);
+      margin-top: -4px;
+      flex-wrap: wrap;
+    }
+
+    .footer-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+    .footer-link:hover {
+      color: var(--accent-cyan);
+      transform: translateY(-1px);
+    }
+
+    .footer-link-highlight {
+      color: var(--text-primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+
+    .footer-link-highlight:hover {
+      color: var(--accent-cyan);
+      text-decoration: underline;
+    }
+
+    .footer-divider {
+      color: var(--border-color);
+      user-select: none;
+    }
+
+    .footer-icon {
+      flex-shrink: 0;
+      transition: stroke 0.2s ease;
+    }
+
+    .footer-link:hover .footer-icon {
+      stroke: var(--accent-cyan);
+    }
+
+    .heart-icon {
+      display: inline-block;
+      animation: heartPulse 2.5s infinite ease-in-out;
+      margin: 0 2px;
+    }
+
+    .coffee-icon {
+      display: inline-block;
+      transition: transform 0.2s ease;
+    }
+
+    .footer-link:hover .coffee-icon {
+      transform: rotate(10deg) scale(1.1);
+    }
+
+    @keyframes heartPulse {
+      0% { transform: scale(1); }
+      14% { transform: scale(1.15); }
+      28% { transform: scale(1); }
+      42% { transform: scale(1.15); }
+      70% { transform: scale(1); }
     }
 
     /* Close Button (Global for Modal and Drawer) */
@@ -1041,7 +1211,7 @@ export class CircuitChordForge extends LitElement {
 
       .app-grid {
         grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
-        grid-template-rows: 48px var(--header-height) 1fr var(--footer-height);
+        grid-template-rows: 48px var(--header-height) 1fr minmax(var(--footer-height), auto) auto;
         gap: var(--gap);
         height: calc(100vh - (var(--gap) * 2));
         height: calc(100dvh - (var(--gap) * 2));
@@ -1228,6 +1398,98 @@ export class CircuitChordForge extends LitElement {
         display: none !important;
       }
     }
+
+    /* Voicing Keyboard & Control Styles */
+    .voicing-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .voicing-control-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .keyboard-viz-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-charcoal);
+      padding: 2px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      width: 224px; /* default fallback, overridden dynamically */
+      height: 46px;
+      cursor: pointer;
+      user-select: none;
+      touch-action: none;
+      box-shadow: var(--shadow-inset);
+      transition: border-color 0.2s ease;
+    }
+
+    .keyboard-viz-container:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .voicing-keyboard {
+      background: transparent;
+    }
+
+    .voicing-keyboard rect.white-key {
+      fill: var(--kb-white-key-bg, #8b8e98);
+      stroke: var(--kb-stroke, #121316);
+      stroke-width: 0.75px;
+      cursor: pointer;
+      transition: fill 0.15s ease;
+    }
+
+    .voicing-keyboard rect.white-key.active {
+      fill: var(--accent-cyan);
+      stroke: var(--accent-cyan);
+    }
+
+    .voicing-keyboard rect.black-key {
+      fill: var(--kb-black-key-bg, #121316);
+      stroke: var(--kb-stroke, #121316);
+      stroke-width: 0.75px;
+      cursor: pointer;
+      transition: fill 0.15s ease;
+    }
+
+    .voicing-keyboard rect.black-key.active {
+      fill: var(--accent-cyan);
+      stroke: var(--accent-cyan);
+    }
+
+    .voicing-keyboard text.keyboard-label {
+      fill: var(--accent-cyan);
+      font-size: 7px;
+      font-weight: 800;
+      pointer-events: none;
+      text-shadow: 0 0 4px var(--accent-cyan-alpha);
+    }
+
+    .relocated-audio-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .relocated-audio-controls .audio-btn {
+      border-radius: 6px;
+      width: 32px;
+      height: 32px;
+      background: var(--bg-charcoal);
+      box-shadow: var(--pad-shadow);
+    }
+
+    @media (max-width: 520px) {
+      .voicing-group {
+        gap: 2px;
+      }
+    }
   `;
 
   // === State Variables ===
@@ -1245,8 +1507,22 @@ export class CircuitChordForge extends LitElement {
     scale: 'chromatic',
     mode: 'chromatic',
   };
-  @state() private voicing: VoicingMode = 'triad';
+  @state() private voicedOffsets: Record<number, number[]> = {};
+  @state() private isMobileViewport = false;
+  @state() private showQualitySelector = false;
+  private hasSeenDrawerPeek = localStorage.getItem('circuit-chords.drawerPeekSeen') === 'true';
+  private peekTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // Voicing drag-to-change state
+  private isDraggingVoicing = false;
+  private dragStartX = 0;
+  private hasMovedVoicing = false;
+  private playDebounceTimeout: any = null;
   @state() private autoPlay = true;
+
+  private handleResize = () => {
+    this.isMobileViewport = window.innerWidth < 520;
+  };
   @state() private transposeProgression = true;
   @state() private inversion = 0;
   @state() private source = '';
@@ -1379,11 +1655,19 @@ export class CircuitChordForge extends LitElement {
     this.audioCleanup = registerAudioStateListener((state) => {
       this.audioActive = state === 'running';
     });
+
+    if (typeof window !== 'undefined') {
+      this.isMobileViewport = window.innerWidth < 520;
+      window.addEventListener('resize', this.handleResize);
+    }
   }
 
   disconnectedCallback() {
     if (this.audioCleanup) {
       this.audioCleanup();
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', this.handleResize);
     }
     super.disconnectedCallback();
   }
@@ -1534,43 +1818,329 @@ export class CircuitChordForge extends LitElement {
   }
 
   private loadDefaultProgression() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const progressionParam = urlParams.get('p');
-    
-    let source = progressionParam ? progressionParam.trim() : '';
-    let parsed = source ? parseProgression(source) : [];
-    
-    if (parsed.length === 0) {
-      source = 'Cmaj7 Am7 Dm7 G7';
-      parsed = parseProgression(source);
+    const defaultSource = 'Cmaj7 Am7 Dm7 G7';
+    const tokens = defaultSource.match(/[A-G](?:#{1,2}|b{1,2})?(?:[^\s,|/]+)?(?:\/[A-G](?:#{1,2}|b{1,2})?)?/g) || [];
+    const parsed: ParsedChord[] = [];
+    for (const symbol of tokens) {
+      const chord = Chord.get(symbol);
+      if (!chord.empty && chord.notes.length > 0) {
+        parsed.push({
+          symbol,
+          tonic: chord.tonic,
+          quality: chord.quality,
+          notes: chord.notes,
+          intervals: chord.intervals,
+          aliases: chord.aliases,
+        });
+      }
+    }
+    if (parsed.length > 0) {
+      this.progression = parsed;
+      this.source = defaultSource;
+      this.activeIndex = 0;
+      this.initVoicedOffsets();
+      const firstChord = parsed[0];
+      const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
+      this.originalKey = baseKey;
+      const defaultScale = 'chromatic';
+      this.config = { ...this.config, key: baseKey, scale: defaultScale, mode: 'chromatic' };
+    }
+  }
+
+
+  private initVoicedOffsets() {
+    const newOffsets: Record<number, number[]> = {};
+    this.progression.forEach((chord, i) => {
+      newOffsets[i] = this.getDefaultVoicedOffsets(chord);
+    });
+    this.voicedOffsets = newOffsets;
+  }
+
+  private getDefaultVoicedOffsets(chord: ParsedChord): number[] {
+    const baseIntervals = chord.intervals
+      .map((inv) => Interval.get(inv).semitones)
+      .filter((val): val is number => typeof val === 'number');
+    return baseIntervals.sort((a, b) => a - b);
+  }
+
+  private shiftVoicingInversion(offsets: number[], steps: number): number[] {
+    if (offsets.length === 0) return [];
+    let current = [...offsets].sort((a, b) => a - b);
+
+    if (steps > 0) {
+      for (let i = 0; i < steps; i++) {
+        const lowest = current.shift()!;
+        current.push(lowest + 12);
+        current.sort((a, b) => a - b);
+      }
+    } else if (steps < 0) {
+      for (let i = 0; i < Math.abs(steps); i++) {
+        const highest = current.pop()!;
+        current.unshift(highest - 12);
+        current.sort((a, b) => a - b);
+      }
     }
 
-    this.progression = parsed;
-    this.source = source;
-    this.activeIndex = 0;
-    const firstChord = parsed[0];
-    const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
-    this.originalKey = baseKey;
-    const symbol = firstChord?.symbol ?? '';
-    const rootMatch = symbol.match(/^([A-G](?:#{1,2}|b{1,2})?)(.*)$/);
-    const suffix = rootMatch ? rootMatch[2] : '';
-    const isMinor = firstChord?.quality?.toLowerCase().includes('minor') ||
-      firstChord?.quality?.toLowerCase().includes('diminished') ||
-      ((suffix.startsWith('m') && !suffix.startsWith('maj')) ||
-       suffix.startsWith('min') ||
-       suffix.startsWith('dim') ||
-       suffix.startsWith('o') ||
-       suffix.startsWith('ø') ||
-       suffix.startsWith('-'));
-    const defaultScale = isMinor ? 'minor' : 'major';
-    this.config = { ...this.config, key: baseKey, scale: defaultScale };
+    const rootMidi = Note.midi((this.getTransposedProgression()[this.activeIndex]?.tonic ?? 'C') + '4') ?? 60;
+    const minMidi = this.isMobileViewport ? 60 : 48;
+    const minOffset = minMidi - rootMidi;
+    const maxOffset = 84 - rootMidi;
+
+    current = current.map(o => {
+      let bounded = o;
+      while (bounded < minOffset) bounded += 12;
+      while (bounded > maxOffset) bounded -= 12;
+      return bounded;
+    }).sort((a, b) => a - b);
+
+    return Array.from(new Set(current));
+  }
+
+  private onKeyboardPointerDown(e: PointerEvent) {
+    const containerEl = e.currentTarget as HTMLElement;
+    containerEl.setPointerCapture(e.pointerId);
+    this.isDraggingVoicing = true;
+    this.dragStartX = e.clientX;
+    this.hasMovedVoicing = false;
+    e.preventDefault();
+  }
+
+  private onKeyboardPointerMove(e: PointerEvent) {
+    if (!this.isDraggingVoicing) return;
+    const deltaX = e.clientX - this.dragStartX;
+    if (Math.abs(deltaX) > 4) {
+      this.hasMovedVoicing = true;
+    }
+    const stepSize = 15;
+    const stepDiff = Math.round(deltaX / stepSize);
+
+    if (stepDiff !== 0) {
+      this.dragStartX = e.clientX;
+      const current = this.voicedOffsets[this.activeIndex] || [];
+      if (current.length > 0) {
+        const updated = this.shiftVoicingInversion(current, stepDiff);
+        this.voicedOffsets = {
+          ...this.voicedOffsets,
+          [this.activeIndex]: updated
+        };
+        if (this.autoPlay) {
+          this.playActiveVoicingDebounced();
+        }
+      }
+    }
+  }
+
+  private onKeyboardPointerUp(e: PointerEvent) {
+    if (!this.isDraggingVoicing) return;
+    this.isDraggingVoicing = false;
+    const containerEl = e.currentTarget as HTMLElement;
+    try {
+      containerEl.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+
+    if (!this.hasMovedVoicing) {
+      const target = e.target as SVGElement;
+      if (target.tagName === 'rect') {
+        const midiAttr = target.getAttribute('data-midi');
+        if (midiAttr) {
+          const clickedMidi = Number(midiAttr);
+          const activeChord = this.getTransposedProgression()[this.activeIndex] ?? null;
+          if (activeChord) {
+            const rootMidi = Note.midi((activeChord.tonic ?? 'C') + '4') ?? 60;
+            const offset = clickedMidi - rootMidi;
+
+            const current = [...(this.voicedOffsets[this.activeIndex] || [])];
+            const index = current.indexOf(offset);
+            if (index !== -1) {
+              current.splice(index, 1);
+            } else {
+              if (current.length < 6) {
+                current.push(offset);
+              }
+            }
+            this.voicedOffsets = {
+              ...this.voicedOffsets,
+              [this.activeIndex]: current.sort((a, b) => a - b)
+            };
+
+            if (this.autoPlay) {
+              this.playActiveVoicingDebounced();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private playActiveVoicingDebounced() {
+    if (this.playDebounceTimeout) {
+      clearTimeout(this.playDebounceTimeout);
+    }
+    this.playDebounceTimeout = setTimeout(() => {
+      this.playActiveVoicing();
+    }, 80);
+  }
+
+  private onKeyboardWheel(e: WheelEvent) {
+    e.preventDefault();
+    const stepDiff = e.deltaY > 0 ? -1 : 1;
+    const current = this.voicedOffsets[this.activeIndex] || [];
+    if (current.length > 0) {
+      const updated = this.shiftVoicingInversion(current, stepDiff);
+      this.voicedOffsets = {
+        ...this.voicedOffsets,
+        [this.activeIndex]: updated
+      };
+      if (this.autoPlay) {
+        this.playActiveVoicingDebounced();
+      }
+    }
+  }
+
+  private renderVoicingKeyboard() {
+    const transposedProgression = this.getTransposedProgression();
+    const activeChord = transposedProgression[this.activeIndex] ?? null;
+    const rootMidi = activeChord ? (Note.midi((activeChord.tonic ?? 'C') + '4') ?? 60) : 60;
+
+    const activeMidis = (this.voicedOffsets[this.activeIndex] || []).map(offset => rootMidi + offset);
+
+    const isMobile = this.isMobileViewport;
+
+    // White key MIDI notes mapping: C4 to C6 on mobile, C3 to C6 otherwise
+    const whiteKeys = isMobile ? [
+      60, 62, 64, 65, 67, 69, 71, // Octave 1
+      72, 74, 76, 77, 79, 81, 83, // Octave 2
+      84                          // Octave 3 C
+    ] : [
+      48, 50, 52, 53, 55, 57, 59, // Octave 0
+      60, 62, 64, 65, 67, 69, 71, // Octave 1
+      72, 74, 76, 77, 79, 81, 83, // Octave 2
+      84                          // Octave 3 C
+    ];
+
+    // Black key MIDI notes and their preceding white key indexes
+    const blackKeys = isMobile ? [
+      { midi: 61, afterIdx: 0 },
+      { midi: 63, afterIdx: 1 },
+      { midi: 66, afterIdx: 3 },
+      { midi: 68, afterIdx: 4 },
+      { midi: 70, afterIdx: 5 },
+
+      { midi: 73, afterIdx: 7 },
+      { midi: 75, afterIdx: 8 },
+      { midi: 78, afterIdx: 10 },
+      { midi: 80, afterIdx: 11 },
+      { midi: 82, afterIdx: 12 }
+    ] : [
+      { midi: 49, afterIdx: 0 },
+      { midi: 51, afterIdx: 1 },
+      { midi: 54, afterIdx: 3 },
+      { midi: 56, afterIdx: 4 },
+      { midi: 58, afterIdx: 5 },
+
+      { midi: 61, afterIdx: 7 },
+      { midi: 63, afterIdx: 8 },
+      { midi: 66, afterIdx: 10 },
+      { midi: 68, afterIdx: 11 },
+      { midi: 70, afterIdx: 12 },
+
+      { midi: 73, afterIdx: 14 },
+      { midi: 75, afterIdx: 15 },
+      { midi: 78, afterIdx: 17 },
+      { midi: 80, afterIdx: 18 },
+      { midi: 82, afterIdx: 19 }
+    ];
+
+    const width = isMobile ? 150 : 220;
+    const containerWidth = isMobile ? 154 : 224;
+
+    return html`
+      <div 
+        class="keyboard-viz-container"
+        style="width: ${containerWidth}px;"
+        @pointerdown=${(e: PointerEvent) => this.onKeyboardPointerDown(e)}
+        @pointermove=${(e: PointerEvent) => this.onKeyboardPointerMove(e)}
+        @pointerup=${(e: PointerEvent) => this.onKeyboardPointerUp(e)}
+        @pointercancel=${(e: PointerEvent) => this.onKeyboardPointerUp(e)}
+        @wheel=${(e: WheelEvent) => this.onKeyboardWheel(e)}
+      >
+        <svg class="voicing-keyboard" width="${width}" height="42" viewBox="0 0 ${width} 42">
+          <!-- 1. Render White Keys -->
+          ${whiteKeys.map((midi, i) => {
+      const x = i * 10;
+      const isActive = activeMidis.includes(midi);
+      return svg`
+              <rect 
+                x="${x}" 
+                y="2" 
+                width="9.2" 
+                height="28" 
+                rx="1" 
+                class="white-key ${isActive ? 'active' : ''}"
+                data-midi="${midi}"
+              />
+            `;
+    })}
+
+          <!-- 2. Render Black Keys -->
+          ${blackKeys.map(({ midi, afterIdx }) => {
+      const x = (afterIdx + 1) * 10 - 3.2;
+      const isActive = activeMidis.includes(midi);
+      return svg`
+              <rect 
+                x="${x}" 
+                y="2" 
+                width="6.4" 
+                height="18" 
+                rx="0.5" 
+                class="black-key ${isActive ? 'active' : ''}"
+                data-midi="${midi}"
+              />
+            `;
+    })}
+
+          <!-- 3. Render note labels under active keys -->
+          ${activeMidis.map(midi => {
+      const wIdx = whiteKeys.indexOf(midi);
+      let labelX = 0;
+      if (wIdx !== -1) {
+        labelX = wIdx * 10 + 4.6;
+      } else {
+        const bk = blackKeys.find(b => b.midi === midi);
+        if (bk) {
+          labelX = (bk.afterIdx + 1) * 10;
+        }
+      }
+      const noteName = Note.pitchClass(Note.fromMidi(midi));
+      return svg`
+              <text x="${labelX}" y="39" text-anchor="middle" class="keyboard-label">
+                ${noteName}
+              </text>
+            `;
+    })}
+        </svg>
+      </div>
+    `;
   }
 
   render() {
     const transposedProgression = this.getTransposedProgression();
     const activeChord = transposedProgression[this.activeIndex] ?? null;
     const pads = buildCircuitGrid(activeChord, this.config);
-    const recipe = buildChordRecipe(activeChord, pads, this.voicing, this.inversion);
+
+    // Construct active recipe pads from voicedOffsets
+    const rootMidi = activeChord ? (Note.midi((activeChord.tonic ?? 'C') + '4') ?? 60) : 60;
+    const activeOffsets = this.voicedOffsets[this.activeIndex] || [];
+    const recipe = activeOffsets.map(offset => {
+      const noteName = Note.fromMidi(rootMidi + offset);
+      const pad = pads.find(p => p.midiNote === noteName);
+      if (pad) {
+        return { note: pad.note, row: pad.row, col: pad.col, index: pad.index };
+      }
+      return null;
+    }).filter((r): r is ChordRecipePad => r !== null);
 
     const uniqueTargets = activeChord ? activeChord.notes.map(n => normalizePitchClass(n)).filter(Boolean) : [];
     const missingNotes = activeChord && this.config.mode === 'collapsed'
@@ -1593,30 +2163,6 @@ export class CircuitChordForge extends LitElement {
             <div class="brand-title">circuit chords</div>
           </div>
           <div class="brand-right">
-            <!-- Audio State Button -->
-            <button class="audio-btn ${this.audioActive ? 'active' : ''}" @click=${this.toggleAudio} title="${this.audioActive ? 'Disable Audio' : 'Enable Audio'}">
-              ${this.audioActive ? html`
-                <svg viewBox="0 0 24 24">
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                </svg>
-              ` : html`
-                <svg viewBox="0 0 24 24">
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                  <line x1="23" y1="9" x2="17" y2="15"></line>
-                  <line x1="17" y1="9" x2="23" y2="15"></line>
-                </svg>
-              `}
-            </button>
-            <!-- Human toggle Button -->
-            ${this.humanLoaded ? html`
-              <button class="audio-btn ${this.showHuman ? 'active' : ''}" @click=${this.toggleHuman} title="Toggle Human Settings">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-              </button>
-            ` : null}
             <!-- Theme Toggle Button -->
             <button class="audio-btn theme-toggle-btn" @click=${this.toggleTheme} title="${this.theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}">
               ${this.theme === 'dark' ? html`
@@ -1676,7 +2222,7 @@ export class CircuitChordForge extends LitElement {
           </div>
         </nav>
 
-        <!-- 2. Top Header Bar (active config summary + voicing toggle) -->
+        <!-- 2. Top Header Bar (active config summary + audio controls) -->
         <header class="panel header-top">
           <div class="config-group">
             <span class="config-label">Key / Scale</span>
@@ -1689,18 +2235,40 @@ export class CircuitChordForge extends LitElement {
 
           <div style="flex:1;"></div>
 
-          <div class="config-group">
-            <span class="config-label">Voicing</span>
-            <div class="tactile-group">
-              ${VOICING_OPTIONS.map((v) => html`
-                <button
-                  class="tactile-btn ${this.voicing === v ? 'active-root' : ''}"
-                  @click=${() => this.onVoicingChange(v as VoicingMode)}
-                  title="Voicing: ${v}">
-                  ${v === 'triad' ? '3' : v === 'seventh' ? '7th' : v}
-                </button>
-              `)}
-            </div>
+          <div class="relocated-audio-controls">
+            <!-- Audio State Button (Mute) -->
+            <button 
+              class="audio-btn ${this.audioActive ? 'active' : ''}" 
+              @click=${this.toggleAudio} 
+              title="${this.audioActive ? 'Disable Audio' : 'Enable Audio'}"
+            >
+              ${this.audioActive ? html`
+                <svg viewBox="0 0 24 24">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+              ` : html`
+                <svg viewBox="0 0 24 24">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <line x1="23" y1="9" x2="17" y2="15"></line>
+                  <line x1="17" y1="9" x2="23" y2="15"></line>
+                </svg>
+              `}
+            </button>
+
+            <!-- Human toggle Button -->
+            ${this.humanLoaded ? html`
+              <button 
+                class="audio-btn ${this.showHuman ? 'active' : ''}" 
+                @click=${this.toggleHuman} 
+                title="Toggle Human Settings"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </button>
+            ` : null}
           </div>
         </header>
 
@@ -2000,7 +2568,44 @@ export class CircuitChordForge extends LitElement {
         </aside>
 
         <!-- 5. Bottom Timeline Footer -->
-        <footer class="panel footer-timeline">
+        <footer class="panel footer-timeline ${this.showQualitySelector && !this.hasSeenDrawerPeek ? 'peek-hint' : ''}">
+          ${this.showQualitySelector ? html`
+            <div class="footer-drawer-content">
+              <div class="footer-voicing-row">
+                <span class="footer-voicing-label">Voicing</span>
+                ${this.renderVoicingKeyboard()}
+              </div>
+              <div class="quality-selector-row">
+                ${[
+          { label: 'maj7', value: 'maj7' },
+          { label: 'm7', value: 'm7' },
+          { label: '7', value: '7' },
+          { label: 'm7b5', value: 'm7b5' },
+          { label: 'dim7', value: 'dim7' },
+          { label: 'sus4', value: 'sus4' },
+          { label: '9', value: '9' },
+          { label: 'maj', value: 'maj' },
+          { label: 'm', value: 'm' }
+        ].map(q => {
+          const activeChord = this.progression[this.activeIndex];
+          let isActive = false;
+          if (activeChord && activeChord.tonic) {
+            const suffix = activeChord.symbol.slice(activeChord.tonic.length);
+            const qSuffix = q.value === 'maj' ? '' : q.value;
+            isActive = suffix === qSuffix;
+          }
+          return html`
+                    <button 
+                      class="quality-pill ${isActive ? 'active' : ''}"
+                      @click=${() => this.changeActiveChordQuality(q.value)}
+                    >
+                      ${q.label}
+                    </button>
+                  `;
+        })}
+              </div>
+            </div>
+          ` : null}
           <progression-stepper
             .originalChords=${this.progression}
             .keyChords=${this.transposeProgression && this.originalKey !== this.config.key ? transposedProgression : []}
@@ -2009,22 +2614,83 @@ export class CircuitChordForge extends LitElement {
             @chord-selected=${(e: CustomEvent<number>) => this.onChordSelected(e)}
           ></progression-stepper>
         </footer>
+
+        <!-- 6. Bottom Links Footer -->
+        <footer class="app-links-footer">
+          <a href="https://github.com/warmsynths/circuit-chords" target="_blank" rel="noopener noreferrer" class="footer-link">
+            <svg class="footer-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+            GitHub
+          </a>
+          <span class="footer-divider">|</span>
+          <span class="footer-text">
+            Made with <span class="heart-icon">💖</span> by <a href="mailto:warmsynthsiloveyou@gmail.com" class="footer-link-highlight">warmsynths</a>
+          </span>
+          <span class="footer-divider">|</span>
+          <a href="https://ko-fi.com/warmsynths" target="_blank" rel="noopener noreferrer" class="footer-link">
+            <span class="coffee-icon">☕</span>
+            Support the Voyage
+          </a>
+        </footer>
       </div>
     `;
   }
 
   // === Business Logic Ported ===
 
+  private changeActiveChordQuality(qualityValue: string) {
+    const activeChord = this.progression[this.activeIndex];
+    if (!activeChord) return;
+
+    const tonic = activeChord.tonic || 'C';
+    const suffix = qualityValue === 'maj' ? '' : qualityValue;
+    const newSymbol = `${tonic}${suffix}`;
+
+    const parsed = Chord.get(newSymbol);
+    if (!parsed.empty && parsed.notes.length > 0) {
+      const updatedChord: ParsedChord = {
+        symbol: newSymbol,
+        tonic: parsed.tonic,
+        quality: parsed.quality,
+        notes: parsed.notes,
+        intervals: parsed.intervals,
+        aliases: parsed.aliases
+      };
+
+      const nextProgression = [...this.progression];
+      nextProgression[this.activeIndex] = updatedChord;
+      this.progression = nextProgression;
+
+      this.voicedOffsets = {
+        ...this.voicedOffsets,
+        [this.activeIndex]: this.getDefaultVoicedOffsets(updatedChord)
+      };
+
+      this.updateSourceFromProgression();
+
+      if (this.autoPlay) {
+        this.playActiveVoicingDebounced();
+      }
+    }
+  }
+
+  private updateSourceFromProgression() {
+    this.source = this.progression.map(c => c.symbol).join(' ');
+  }
+
   private playActiveVoicing() {
     const transposedProgression = this.getTransposedProgression();
     const activeChord = transposedProgression[this.activeIndex] ?? null;
     if (!activeChord) return;
 
-    const pads = buildCircuitGrid(activeChord, this.config);
-    const recipe = buildChordRecipe(activeChord, pads, this.voicing, this.inversion);
-    const midiNotes = recipe
-      .map((rPad) => pads.find((p) => p.index === rPad.index)?.midiNote)
-      .filter((note): note is string => Boolean(note));
+    let offsets = this.voicedOffsets[this.activeIndex] || [];
+    if (offsets.length === 0) {
+      offsets = this.getDefaultVoicedOffsets(activeChord);
+    }
+
+    const rootMidi = Note.midi((activeChord.tonic ?? 'C') + '4') ?? 60;
+    const midiNotes = offsets.map(o => Note.fromMidi(rootMidi + o)).filter((n): n is string => n !== null);
 
     if (midiNotes.length > 0) {
       playChord(midiNotes, 0.7, this.humanState);
@@ -2113,14 +2779,30 @@ export class CircuitChordForge extends LitElement {
     this.config = { ...this.config, scale, mode };
   }
 
-  private onVoicingChange(voicing: VoicingMode) {
-    this.voicing = voicing;
-  }
+
 
   private onChordSelected(event: CustomEvent<number>) {
-    this.activeIndex = event.detail;
-    if (this.autoPlay) {
-      setTimeout(() => this.playActiveVoicing(), 20);
+    const newIndex = event.detail;
+    if (this.activeIndex === newIndex) {
+      this.showQualitySelector = !this.showQualitySelector;
+    } else {
+      this.activeIndex = newIndex;
+      this.showQualitySelector = false;
+      if (this.autoPlay) {
+        setTimeout(() => this.playActiveVoicing(), 20);
+      }
+
+      // One-time peek to hint at the drawer functionality
+      if (!this.hasSeenDrawerPeek) {
+        this.hasSeenDrawerPeek = true;
+        localStorage.setItem('circuit-chords.drawerPeekSeen', 'true');
+        this.showQualitySelector = true;
+        if (this.peekTimeout) clearTimeout(this.peekTimeout);
+        this.peekTimeout = setTimeout(() => {
+          this.showQualitySelector = false;
+          this.peekTimeout = null;
+        }, 1500);
+      }
     }
   }
 
@@ -2128,26 +2810,16 @@ export class CircuitChordForge extends LitElement {
     this.progression = event.detail.progression;
     this.source = event.detail.source;
     this.activeIndex = 0;
+    this.initVoicedOffsets();
 
     const firstChord = event.detail.progression[0];
     const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
     this.originalKey = baseKey;
 
-    const symbol = firstChord?.symbol ?? '';
-    const rootMatch = symbol.match(/^([A-G](?:#{1,2}|b{1,2})?)(.*)$/);
-    const suffix = rootMatch ? rootMatch[2] : '';
-    const isMinor = firstChord?.quality?.toLowerCase().includes('minor') ||
-      firstChord?.quality?.toLowerCase().includes('diminished') ||
-      ((suffix.startsWith('m') && !suffix.startsWith('maj')) ||
-       suffix.startsWith('min') ||
-       suffix.startsWith('dim') ||
-       suffix.startsWith('o') ||
-       suffix.startsWith('ø') ||
-       suffix.startsWith('-'));
-    const defaultScale = isMinor ? 'minor' : 'major';
+    const defaultScale = 'chromatic';
 
     if (firstChord?.tonic) {
-      this.config = { ...this.config, key: baseKey, scale: defaultScale };
+      this.config = { ...this.config, key: baseKey, scale: defaultScale, mode: 'chromatic' };
     }
 
     if (this.autoPlay && this.progression.length > 0) {

@@ -1,4 +1,3 @@
-import { get as getVoicing } from '@tonaljs/voicing';
 import { Note, Scale, Interval } from 'tonal';
 import type { ParsedChord } from './chord-parser';
 
@@ -7,7 +6,15 @@ export type ScaleMode = 'collapsed' | 'chromatic';
 /** Visual state of pad according to chord/root membership. */
 export type PadState = 'dim' | 'lit' | 'active' | 'scale';
 /** Chord voicing strategy for selecting playable pad subset. */
-export type VoicingMode = 'triad' | 'seventh' | 'spread';
+export type VoicingMode =
+  | 'closed'
+  | 'open-triad'
+  | 'drop2'
+  | 'drop3'
+  | 'spread'
+  | 'octave'
+  | 'shell-dominant'
+  | 'altered-dominant';
 
 /**
  * User-selected grid mapping configuration.
@@ -105,7 +112,16 @@ export const SCALE_OPTIONS = [
 ];
 
 export const KEY_OPTIONS = CHROMATIC_NOTES;
-export const VOICING_OPTIONS: VoicingMode[] = ['triad', 'seventh', 'spread'];
+export const VOICING_OPTIONS: VoicingMode[] = [
+  'closed',
+  'open-triad',
+  'drop2',
+  'drop3',
+  'spread',
+  'octave',
+  'shell-dominant',
+  'altered-dominant',
+];
 
 const CHROMATIC_ROW_STRIDE = 5;
 const COLLAPSED_ROW_STRIDE = 3;
@@ -239,183 +255,7 @@ export function buildCircuitGrid(chord: ParsedChord | null, config: GridConfig):
  * @param maxPads Maximum number of targets to return.
  * @returns Ordered list of pads representing suggested finger presses.
  */
-export function buildChordRecipe(
-  chord: ParsedChord | null,
-  pads: CircuitPad[],
-  voicing: VoicingMode,
-  inversion = 0,
-  maxPads = 4
-): ChordRecipePad[] {
-  if (!chord) {
-    return [];
-  }
 
-  const uniqueTargets = getVoicingTargets(chord, voicing);
-
-  const recipe = uniqueTargets
-    .map((target, position) => selectPadForVoicing(target, position, pads, voicing, inversion))
-    .filter((pad): pad is CircuitPad => Boolean(pad))
-    .slice(0, maxPads)
-    .map((pad) => ({
-      note: pad.note,
-      row: pad.row,
-      col: pad.col,
-      index: pad.index,
-      offset: pad.offset,
-    }));
-
-  // Sort voicing pads by grid offset (pitch height) so the visual press order
-  // labels (1 to 4) always map from lowest pitch to highest.
-  return recipe
-    .sort((left, right) => left.offset - right.offset)
-    .map(({ note, row, col, index }) => ({ note, row, col, index }));
-}
-
-/**
- * Derives chord note targets from interval degrees, then enriches with engine data.
- *
- * @param chord Parsed chord data.
- * @param voicing Desired voicing mode.
- * @returns Ordered pitch classes used for recipe selection.
- */
-function getVoicingTargets(chord: ParsedChord, voicing: VoicingMode): string[] {
-  const degreeToNote = new Map<number, string>();
-  const orderedUnique: string[] = [];
-  const tonic = normalizePitchClass(chord.tonic);
-
-  for (let index = 0; index < chord.notes.length; index += 1) {
-    const normalized = normalizePitchClass(chord.notes[index]);
-    if (!normalized) {
-      continue;
-    }
-
-    if (!orderedUnique.includes(normalized)) {
-      orderedUnique.push(normalized);
-    }
-
-    const degree = parseDegree(chord.intervals[index]);
-    if (degree !== null && !degreeToNote.has(degree)) {
-      degreeToNote.set(degree, normalized);
-    }
-  }
-
-  const degreePrefs: Record<VoicingMode, number[]> = {
-    triad: [3, 5],
-    seventh: [3, 5, 7],
-    spread: [5, 7, 3],
-  };
-
-  const targetCounts: Record<VoicingMode, number> = {
-    triad: 3,
-    seventh: 4,
-    spread: 4,
-  };
-
-  const preferred = Array.from(new Set([tonic, ...degreePrefs[voicing]
-    .map((degree) => degreeToNote.get(degree))
-    .filter((note): note is string => Boolean(note))]
-    .filter((note): note is string => Boolean(note))));
-
-  if (preferred.length >= targetCounts[voicing]) {
-    return preferred.slice(0, targetCounts[voicing]);
-  }
-
-  const voicedTargets = getVoicingTargetsFromEngine(chord, voicing);
-  const merged = Array.from(new Set([...preferred, ...voicedTargets, ...orderedUnique]));
-  return merged.slice(0, targetCounts[voicing]);
-}
-
-/**
- * Attempts voicing extraction through Tonal voicing resolver.
- *
- * @param chord Parsed chord data.
- * @param voicing Desired voicing mode.
- * @returns Pitch classes returned by voicing engine, normalized for grid use.
- */
-function getVoicingTargetsFromEngine(chord: ParsedChord, voicing: VoicingMode): string[] {
-  let voiced: string[] = [];
-
-  try {
-    const resolved = getVoicing(chord.symbol);
-    voiced = Array.isArray(resolved) ? resolved : [];
-  } catch {
-    voiced = [];
-  }
-
-  if (voiced.length === 0 && chord.tonic && chord.quality) {
-    try {
-      const resolved = getVoicing(`${chord.tonic}${chord.quality}`);
-      voiced = Array.isArray(resolved) ? resolved : [];
-    } catch {
-      voiced = [];
-    }
-  }
-
-  const pitchClasses = voiced
-    .filter((note): note is string => typeof note === 'string')
-    .map((note) => normalizePitchClass(note))
-    .filter(isDefined);
-
-  const unique = Array.from(new Set(pitchClasses));
-  if (unique.length === 0) {
-    return [];
-  }
-
-  if (voicing === 'triad') {
-    return unique.slice(0, 3);
-  }
-
-  if (voicing === 'seventh') {
-    return unique.slice(0, 4);
-  }
-
-  // Spread uses same voiced tones but wider priority order.
-  const spreadOrder = [0, 2, 3, 1];
-  const spread = spreadOrder
-    .map((index) => unique[index])
-    .filter((note): note is string => Boolean(note));
-
-  return Array.from(new Set(spread)).slice(0, 4);
-}
-
-/**
- * Picks best pad candidate for one target note according to voicing strategy.
- *
- * @param target Desired pitch class.
- * @param position Position of target within voicing.
- * @param pads Current grid pads.
- * @param voicing Active voicing mode.
- * @returns Selected pad candidate or undefined if note not present.
- */
-function selectPadForVoicing(
-  target: string,
-  position: number,
-  pads: CircuitPad[],
-  voicing: VoicingMode,
-  inversion = 0
-): CircuitPad | undefined {
-  const candidates = pads
-    .filter((pad) => pad.note === target)
-    .sort((left, right) => left.offset - right.offset);
-
-  if (candidates.length === 0) {
-    return undefined;
-  }
-
-  const shouldInvert = position < inversion;
-
-  if (voicing === 'spread') {
-    let spreadIndex = position;
-    if (shouldInvert) {
-      spreadIndex += 1;
-    }
-    const finalIndex = Math.min(spreadIndex, candidates.length - 1);
-    return candidates[finalIndex];
-  }
-
-  const candidateIndex = shouldInvert ? Math.min(1, candidates.length - 1) : 0;
-  return candidates[candidateIndex];
-}
 
 /**
  * Parses interval degree number from Tonal interval string.
