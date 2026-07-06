@@ -1818,25 +1818,20 @@ export class CircuitChordForge extends LitElement {
   }
 
   private loadDefaultProgression() {
-    const defaultSource = 'Cmaj7 Am7 Dm7 G7';
-    const tokens = defaultSource.match(/[A-G](?:#{1,2}|b{1,2})?(?:[^\s,|/]+)?(?:\/[A-G](?:#{1,2}|b{1,2})?)?/g) || [];
-    const parsed: ParsedChord[] = [];
-    for (const symbol of tokens) {
-      const chord = Chord.get(symbol);
-      if (!chord.empty && chord.notes.length > 0) {
-        parsed.push({
-          symbol,
-          tonic: chord.tonic,
-          quality: chord.quality,
-          notes: chord.notes,
-          intervals: chord.intervals,
-          aliases: chord.aliases,
-        });
-      }
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryParam = urlParams.get('p');
+    const sourceText = queryParam ? queryParam.trim() : 'Cmaj7 Am7 Dm7 G7';
+    
+    let parsed = parseProgression(sourceText);
+
+    // If query parameter was provided but parsed no chords, fall back to default
+    if (parsed.length === 0 && queryParam) {
+      parsed = parseProgression('Cmaj7 Am7 Dm7 G7');
     }
+
     if (parsed.length > 0) {
       this.progression = parsed;
-      this.source = defaultSource;
+      this.source = queryParam && parsed.length > 0 ? sourceText : 'Cmaj7 Am7 Dm7 G7';
       this.activeIndex = 0;
       this.initVoicedOffsets();
       const firstChord = parsed[0];
