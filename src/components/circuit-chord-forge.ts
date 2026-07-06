@@ -1818,7 +1818,13 @@ export class CircuitChordForge extends LitElement {
   }
 
   private loadDefaultProgression() {
-    const urlParams = new URLSearchParams(window.location.search);
+    let search = window.location.search;
+    // If a sharp chord (e.g. F#m7) is passed without URL encoding, the browser 
+    // splits the string at the '#' into location.search and location.hash.
+    if (window.location.hash && !window.location.hash.startsWith('#/')) {
+      search += window.location.hash;
+    }
+    const urlParams = new URLSearchParams(search);
     const queryParam = urlParams.get('p');
     const sourceText = queryParam ? queryParam.trim() : 'Cmaj7 Am7 Dm7 G7';
     
