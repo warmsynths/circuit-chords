@@ -12,8 +12,11 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@lit-labs/context": "^0.5.1",
+    "@lit/context": "^1.1.6",
     "@tonaljs/voicing": "^5.1.3",
     "lit": "^3.2.0",
+    "sass": "^1.101.0",
     "tonal": "^6.4.0",
     "tone": "^15.1.22"
   },

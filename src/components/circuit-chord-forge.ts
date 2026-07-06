@@ -19,9 +19,66 @@ import {
 import { playChord, isAudioActive, startAudio, suspendAudio, registerAudioStateListener } from '../lib/audio';
 import { PatchData, decodePatchDump, createRequestDumpCommand, encodePatchDump, PATCH_BYTES } from '../lib/circuit-sysex';
 import './circuit-patch-editor';
+import { ContextProvider } from '@lit/context';
+import { uiContext, midiContext, chordContext, actionsContext, UIState, MidiState, ChordState, AppActions } from '../store/contexts';
+import './ui/brand-header';
+import './ui/sidebar-nav';
+import './ui/settings-panel';
+import './ui/voicing-keyboard';
 
 @customElement('circuit-chord-forge')
 export class CircuitChordForge extends LitElement {
+  private uiProvider = new ContextProvider(this, { context: uiContext });
+  private midiProvider = new ContextProvider(this, { context: midiContext });
+  private chordProvider = new ContextProvider(this, { context: chordContext });
+  private actionsProvider = new ContextProvider(this, { context: actionsContext });
+
+  protected willUpdate(changedProperties: Map<string | number | symbol, unknown>) {
+    super.willUpdate(changedProperties);
+    this.uiProvider.setValue({
+      theme: this.theme,
+      activeTab: this.activeTab,
+      isMobileViewport: this.isMobileViewport,
+      showQualitySelector: this.showQualitySelector,
+      showSettings: this.showSettings,
+      showHelp: this.showHelp,
+      showHuman: this.showHuman
+    });
+    this.midiProvider.setValue({
+      midiConnected: this.midiConnected,
+      midiDevices: this.midiDevices,
+      selectedMidiDevice: this.selectedMidiDevice,
+      activeMidiDevice: this.activeMidiDevice,
+      selectedMidiChannel: this.selectedMidiChannel
+    });
+    this.chordProvider.setValue({
+      progression: this.progression,
+      originalKey: this.originalKey,
+      activeIndex: this.activeIndex,
+      config: this.config,
+      voicedOffsets: this.voicedOffsets,
+      transposeProgression: this.transposeProgression,
+      inversion: this.inversion,
+      hideScaleWarningForNotes: this.hideScaleWarningForNotes,
+      showScaleWarnings: this.showScaleWarnings
+    });
+    this.actionsProvider.setValue({
+      setTheme: (theme) => { this.theme = theme; localStorage.setItem('circuit-chords.theme', theme); this.classList.toggle('theme-light', theme === 'light'); },
+      setActiveTab: (tab) => this.activeTab = tab,
+      toggleAudio: () => this.toggleAudio(),
+      playActiveVoicing: () => this.playActiveVoicing(),
+      toggleMidi: () => {},
+      setProgression: (p) => this.progression = p,
+      setActiveIndex: (i) => this.activeIndex = i,
+      updateConfig: (c) => this.config = { ...this.config, ...c },
+      setVoicedOffsets: (i, o) => this.voicedOffsets = { ...this.voicedOffsets, [i]: o },
+      setInversion: (i) => this.inversion = i,
+      toggleAutoPlay: () => this.autoPlay = !this.autoPlay,
+      toggleSettings: () => this.toggleSettings(),
+      toggleHelp: () => this.toggleHelp(),
+      toggleHuman: () => this.toggleHuman()
+    });
+  }
   static styles = css`
     :host {
       /* 1. DESIGN THEME & COLOR PALETTE */
@@ -2151,77 +2208,10 @@ export class CircuitChordForge extends LitElement {
     return html`
       <div class="app-grid">
         <!-- Brand Header Bar -->
-        <header class="brand-header">
-          <div class="brand-left">
-            <svg class="brand-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="32" height="32" rx="6" fill="var(--brand-logo-bg, #ffffff)" />
-              <g transform="rotate(-45 16 16)" fill="var(--brand-logo-fill, #1a1b20)">
-                <rect x="6.5" y="6" width="5" height="14" rx="2.5" />
-                <rect x="13.5" y="12" width="5" height="14" rx="2.5" />
-                <rect x="20.5" y="6" width="5" height="14" rx="2.5" />
-              </g>
-            </svg>
-            <div class="brand-title">circuit chords</div>
-          </div>
-          <div class="brand-right">
-            <!-- Theme Toggle Button -->
-            <button class="audio-btn theme-toggle-btn" @click=${this.toggleTheme} title="${this.theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}">
-              ${this.theme === 'dark' ? html`
-                <!-- Sun Icon -->
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="5"></circle>
-                  <line x1="12" y1="1" x2="12" y2="3"></line>
-                  <line x1="12" y1="21" x2="12" y2="23"></line>
-                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                  <line x1="1" y1="12" x2="3" y2="12"></line>
-                  <line x1="21" y1="12" x2="23" y2="12"></line>
-                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                </svg>
-              ` : html`
-                <!-- Moon Icon -->
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                </svg>
-              `}
-            </button>
-            <div class="midi-led-group">
-              <span class="midi-led ${this.midiConnected ? 'connected' : ''}"></span>
-              MIDI
-            </div>
-          </div>
-        </header>
+        <brand-header></brand-header>
 
         <!-- 1. Left Navigation Tab Bar -->
-        <nav class="panel sidebar-left">
-          <button class="nav-btn ${this.activeTab === 'grid' ? 'active' : ''}" title="Grid View" @click=${() => this.activeTab = 'grid'}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-          </button>
-          <button class="nav-btn ${this.activeTab === 'data' ? 'active' : ''}" title="Key &amp; Scale" @click=${() => this.activeTab = 'data'}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-          </button>
-          <button class="nav-btn ${this.activeTab === 'input' ? 'active' : ''}" title="Chord Input" @click=${() => this.activeTab = 'input'}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-          </button>
-          <button 
-            class="nav-btn ${this.activeTab === 'patch' ? 'active' : ''}" 
-            title="Patch Editor" 
-            @click=${() => { if (this.isCircuitTracksConnected) this.activeTab = 'patch'; }}
-            style="opacity: ${this.isCircuitTracksConnected ? '1' : '0.3'}; cursor: ${this.isCircuitTracksConnected ? 'pointer' : 'not-allowed'};"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
-          </button>
-          <div class="nav-divider"></div>
-          <div class="nav-bottom">
-            <button class="nav-btn ${this.showHelp ? 'active' : ''}" title="Help ?" @click=${() => this.toggleHelp()}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-            </button>
-            <button class="nav-btn ${this.showSettings ? 'active' : ''}" title="Settings" @click=${() => this.toggleSettings()}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-            </button>
-          </div>
-        </nav>
+        <sidebar-nav .isCircuitTracksConnected=${this.isCircuitTracksConnected}></sidebar-nav>
 
         <!-- 2. Top Header Bar (active config summary + audio controls) -->
         <header class="panel header-top">
@@ -2426,91 +2416,7 @@ export class CircuitChordForge extends LitElement {
         ` : null}
 
         <!-- 4. Right Sidebar (MIDI HUD / Modal on Desktop) -->
-        <aside class="panel sidebar-right ${this.showSettings ? 'open' : ''}">
-          <!-- Close Button -->
-          <button class="close-btn" @click=${() => this.showSettings = false} title="Close Settings">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-
-          <!-- Sidebar Header -->
-          <div class="sidebar-header" style="width: 100%; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 12px; margin-bottom: 8px;">
-            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #ffffff; letter-spacing: -0.02em;">Settings</h3>
-          </div>
-
-          <!-- General Settings -->
-          <div class="settings-section">
-            <h4 class="section-title">General</h4>
-            <label style="display: flex; align-items: center; cursor: pointer; color: #b0b3b8; font-size: 0.9rem;">
-              <input type="checkbox" .checked=${this.showScaleWarnings} @change=${(e: Event) => this.toggleScaleWarnings((e.target as HTMLInputElement).checked)} style="margin-right: 8px; cursor: pointer;">
-              Show warnings for out-of-scale notes
-            </label>
-          </div>
-
-          <!-- MIDI Settings -->
-          <div class="settings-section">
-            <h4 class="section-title">MIDI Settings</h4>
-            
-            <div class="midi-status">
-              <div class="midi-icon-wrapper ${this.midiConnected ? 'connected' : ''}">
-                <svg class="midi-svg" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="40" stroke-width="4" />
-                  <circle cx="25" cy="70" r="6" fill="currentColor" />
-                  <circle cx="75" cy="70" r="6" fill="currentColor" />
-                  <circle cx="20" cy="40" r="6" fill="currentColor" />
-                  <circle cx="80" cy="40" r="6" fill="currentColor" />
-                  <circle cx="50" cy="20" r="6" fill="currentColor" />
-                  <path d="M 45 90 L 50 80 L 55 90 Z" fill="currentColor" stroke="none" />
-                </svg>
-              </div>
-              <div class="status-info">
-                <div class="status-text ${this.midiConnected ? 'connected' : 'disconnected'}">
-                  ${this.midiConnected ? 'CONNECTED' : 'DISCONNECTED'}
-                </div>
-                ${this.midiConnected && this.activeMidiDevice ? html`
-                  <div class="active-device-name" title="${this.activeMidiDevice}">
-                    ${this.activeMidiDevice}
-                  </div>
-                ` : ''}
-              </div>
-            </div>
-
-            <!-- Device selection & connection trigger -->
-            ${this.midiDevices.length > 0 ? html`
-              <div class="midi-config">
-                <span class="config-label">Available Devices</span>
-                <select class="midi-select" .value=${this.selectedMidiDevice} @change=${(e: Event) => this.selectedMidiDevice = (e.target as HTMLSelectElement).value}>
-                  ${this.midiDevices.map(device => html`
-                    <option value=${device} ?selected=${this.selectedMidiDevice === device}>${device}</option>
-                  `)}
-                </select>
-
-                <span class="config-label" style="margin-top: 8px;">MIDI Channel</span>
-                <select class="midi-select" .value=${this.selectedMidiChannel.toString()} @change=${(e: Event) => this.selectedMidiChannel = parseInt((e.target as HTMLSelectElement).value, 10)}>
-                  ${Array.from({ length: 16 }, (_, i) => i + 1).map(channel => html`
-                    <option value=${channel.toString()} ?selected=${this.selectedMidiChannel === channel}>Channel ${channel}</option>
-                  `)}
-                </select>
-                
-                ${this.midiConnected && this.activeMidiDevice === this.selectedMidiDevice ? html`
-                  <button class="midi-btn disconnect" @click=${this.disconnectMidiDevice}>
-                    Disconnect
-                  </button>
-                ` : html`
-                  <button class="midi-btn connect" @click=${this.connectMidiDevice} ?disabled=${!this.selectedMidiDevice}>
-                    Connect
-                  </button>
-                `}
-              </div>
-            ` : html`
-              <div class="no-devices-msg">
-                No MIDI devices detected
-              </div>
-            `}
-          </div>
-        </aside>
+        <settings-panel @device-select=${(e) => this.selectedMidiDevice = e.detail} @channel-select=${(e) => this.selectedMidiChannel = e.detail} @midi-connect=${() => this.connectMidiDevice()} @midi-disconnect=${() => this.disconnectMidiDevice()} @warning-toggle=${(e) => this.toggleScaleWarnings(e.detail)}></settings-panel>
 
         <!-- Help Sidebar/Modal Panel -->
         <aside class="panel sidebar-help ${this.showHelp ? 'open' : ''}">
@@ -2574,7 +2480,7 @@ export class CircuitChordForge extends LitElement {
             <div class="footer-drawer-content">
               <div class="footer-voicing-row">
                 <span class="footer-voicing-label">Voicing</span>
-                ${this.renderVoicingKeyboard()}
+                ${html`<voicing-keyboard @keyboard-pointer-down=${(e) => this.onKeyboardPointerDown(e.detail)} @keyboard-pointer-move=${(e) => this.onKeyboardPointerMove(e.detail)} @keyboard-pointer-up=${(e) => { const ev = e.detail; ev.target = {tagName: ev.midi ? 'rect' : 'svg', getAttribute: () => ev.midi}; this.onKeyboardPointerUp(ev); }} @keyboard-wheel=${(e) => { const ev = e.detail; ev.preventDefault = () => {}; this.onKeyboardWheel(ev); }}></voicing-keyboard>`}
               </div>
               <div class="quality-selector-row">
                 ${[
