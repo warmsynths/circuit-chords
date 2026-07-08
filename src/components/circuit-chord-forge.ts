@@ -483,7 +483,7 @@ export class CircuitChordForge extends LitElement {
       padding: 24px;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      overflow-y: auto;
     }
 
     /* Tab 1: Grid View */
@@ -1580,7 +1580,16 @@ export class CircuitChordForge extends LitElement {
   private handleResize = () => {
     this.isMobileViewport = window.innerWidth < 520;
   };
-  @state() private transposeProgression = true;
+  @state()
+  private transposeProgression = false;
+
+  @state()
+  private chordCores: any[] = [];
+
+  @state()
+  private chordModifiers: any[] = [];
+
+  private getChordSuffixFn: any = null;
   @state() private inversion = 0;
   @state() private source = '';
   @state() private showSettings = false;
@@ -1698,6 +1707,10 @@ export class CircuitChordForge extends LitElement {
     loadEngine
       .then((engine) => {
         this.humanLoaded = true;
+        this.chordCores = engine.CHORD_CORES || [];
+        this.chordModifiers = engine.CHORD_MODIFIERS || [];
+        this.getChordSuffixFn = engine.getChordSuffix;
+        
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('state')) {
           const stateStr = urlParams.get('state')!;
@@ -1889,7 +1902,9 @@ export class CircuitChordForge extends LitElement {
       symbol: sc.symbol,
       tonic: sc.root,
       quality: sc.quality,
-      notes: sc.midiNotes.map((n: number) => n.toString()), // the parser expects pitch classes here usually, but we store exact notes below
+      core: sc.core,
+      modifier: sc.modifier,
+      notes: sc.midiNotes ? sc.midiNotes.map((n: number) => Note.pitchClass(Note.fromMidi(n))) : [],
       intervals: [],
       aliases: [],
       exactMidiNotes: sc.midiNotes, // custom field we will use in music-grid
@@ -1960,7 +1975,14 @@ export class CircuitChordForge extends LitElement {
   private initVoicedOffsets() {
     const newOffsets: Record<number, number[]> = {};
     this.progression.forEach((chord, i) => {
-      newOffsets[i] = this.getDefaultVoicedOffsets(chord);
+      if (chord.exactMidiNotes && chord.exactMidiNotes.length > 0) {
+        const rootMidi = Note.midi((chord.tonic ?? 'C') + '4') ?? 60;
+        newOffsets[i] = chord.exactMidiNotes
+          .map((m: number) => m - rootMidi)
+          .sort((a, b) => a - b);
+      } else {
+        newOffsets[i] = this.getDefaultVoicedOffsets(chord);
+      }
     });
     this.voicedOffsets = newOffsets;
   }
@@ -2533,34 +2555,60 @@ export class CircuitChordForge extends LitElement {
                 <span class="footer-voicing-label">Voicing</span>
                 ${html`<voicing-keyboard @keyboard-pointer-down=${(e: CustomEvent) => this.onKeyboardPointerDown(e.detail)} @keyboard-pointer-move=${(e: CustomEvent) => this.onKeyboardPointerMove(e.detail)} @keyboard-pointer-up=${(e: CustomEvent) => { const ev = e.detail; ev.target = {tagName: ev.midi ? 'rect' : 'svg', getAttribute: () => ev.midi}; this.onKeyboardPointerUp(ev); }} @keyboard-wheel=${(e: CustomEvent) => { const ev = e.detail; ev.preventDefault = () => {}; this.onKeyboardWheel(ev); }}></voicing-keyboard>`}
               </div>
-              <div class="quality-selector-row">
-                ${[
-          { label: 'maj7', value: 'maj7' },
-          { label: 'm7', value: 'm7' },
-          { label: '7', value: '7' },
-          { label: 'm7b5', value: 'm7b5' },
-          { label: 'dim7', value: 'dim7' },
-          { label: 'sus4', value: 'sus4' },
-          { label: '9', value: '9' },
-          { label: 'maj', value: 'maj' },
-          { label: 'm', value: 'm' }
-        ].map(q => {
-          const activeChord = this.progression[this.activeIndex];
-          let isActive = false;
-          if (activeChord && activeChord.tonic) {
-            const suffix = activeChord.symbol.slice(activeChord.tonic.length);
-            const qSuffix = q.value === 'maj' ? '' : q.value;
-            isActive = suffix === qSuffix;
-          }
-          return html`
-                    <button 
-                      class="quality-pill ${isActive ? 'active' : ''}"
-                      @click=${() => this.changeActiveChordQuality(q.value)}
-                    >
-                      ${q.label}
-                    </button>
-                  `;
-        })}
+              <div class="quality-selector-row" style="flex-direction: column; gap: 4px;">
+                <div class="quality-row-group" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px;">
+                  ${this.chordCores.map(c => {
+                    const activeChord = this.progression[this.activeIndex];
+                    let isSelected = false;
+                    if (activeChord) {
+                      if (activeChord.core !== undefined) {
+                        isSelected = activeChord.core === c.value;
+                      } else {
+                        // Tonal.js parsed chord.type
+                        const type = activeChord.quality || '';
+                        const sym = activeChord.symbol || '';
+                        if (c.value === 'maj' && (type === 'Major' || sym.endsWith('M') || sym.endsWith('maj') || sym.length === activeChord.tonic?.length)) isSelected = true;
+                        else if (c.value === 'm' && type === 'Minor') isSelected = true;
+                        else if (c.value === 'dim' && type === 'Diminished') isSelected = true;
+                        else if (c.value === 'sus4' && sym.includes('sus')) isSelected = true;
+                      }
+                    }
+                    return html`
+                      <button 
+                        class="quality-pill ${isSelected ? 'active' : ''}"
+                        @click=${() => this.changeActiveChordCore(c.value)}
+                      >
+                        ${c.label}
+                      </button>
+                    `;
+                  })}
+                </div>
+                <div class="quality-row-group" style="display: flex; gap: 4px; overflow-x: auto;">
+                  ${this.chordModifiers.map(m => {
+                    const activeChord = this.progression[this.activeIndex];
+                    let isSelected = false;
+                    if (activeChord) {
+                      if (activeChord.modifier !== undefined) {
+                        isSelected = activeChord.modifier === m.value;
+                      } else {
+                        const sym = activeChord.symbol || '';
+                        if (m.value === '7' && sym.includes('7') && !sym.includes('maj7')) isSelected = true;
+                        else if (m.value === 'maj7' && sym.includes('maj7')) isSelected = true;
+                        else if (m.value === '9' && sym.includes('9')) isSelected = true;
+                        else if (m.value === '6' && sym.includes('6')) isSelected = true;
+                        else if (m.value === '' && (!sym.includes('7') && !sym.includes('9') && !sym.includes('6'))) isSelected = true;
+                      }
+                    }
+                    return html`
+                      <button 
+                        class="quality-pill ${isSelected ? 'active' : ''}"
+                        @click=${() => this.changeActiveChordModifier(m.value)}
+                      >
+                        ${m.label}
+                      </button>
+                    `;
+                  })}
+                </div>
               </div>
             </div>
           ` : null}
@@ -2597,12 +2645,51 @@ export class CircuitChordForge extends LitElement {
 
   // === Business Logic Ported ===
 
-  private changeActiveChordQuality(qualityValue: string) {
+  private changeActiveChordCore(newCore: string) {
+    if (!this.getChordSuffixFn) return;
+    const activeChord = this.progression[this.activeIndex];
+    if (!activeChord) return;
+
+    let currentMod = activeChord.modifier;
+    if (currentMod === undefined) {
+      // Guess current modifier
+      const sym = activeChord.symbol || '';
+      if (sym.includes('7') && !sym.includes('maj7')) currentMod = '7';
+      else if (sym.includes('maj7')) currentMod = 'maj7';
+      else if (sym.includes('9')) currentMod = '9';
+      else if (sym.includes('6')) currentMod = '6';
+      else currentMod = '';
+    }
+
+    const suffix = this.getChordSuffixFn(newCore, currentMod);
+    this.updateActiveChordSuffix(suffix, newCore, currentMod);
+  }
+
+  private changeActiveChordModifier(newMod: string) {
+    if (!this.getChordSuffixFn) return;
+    const activeChord = this.progression[this.activeIndex];
+    if (!activeChord) return;
+
+    let currentCore = activeChord.core;
+    if (currentCore === undefined) {
+      // Guess current core
+      const type = activeChord.quality || '';
+      const sym = activeChord.symbol || '';
+      if (type === 'Minor') currentCore = 'm';
+      else if (type === 'Diminished') currentCore = 'dim';
+      else if (sym.includes('sus')) currentCore = 'sus4';
+      else currentCore = 'maj';
+    }
+
+    const suffix = this.getChordSuffixFn(currentCore, newMod);
+    this.updateActiveChordSuffix(suffix, currentCore, newMod);
+  }
+
+  private updateActiveChordSuffix(suffix: string, newCore?: string, newMod?: string) {
     const activeChord = this.progression[this.activeIndex];
     if (!activeChord) return;
 
     const tonic = activeChord.tonic || 'C';
-    const suffix = qualityValue === 'maj' ? '' : qualityValue;
     const newSymbol = `${tonic}${suffix}`;
 
     const parsed = Chord.get(newSymbol);
@@ -2611,6 +2698,8 @@ export class CircuitChordForge extends LitElement {
         symbol: newSymbol,
         tonic: parsed.tonic,
         quality: parsed.quality,
+        core: newCore,
+        modifier: newMod,
         notes: parsed.notes,
         intervals: parsed.intervals,
         aliases: parsed.aliases

@@ -10,12 +10,18 @@ export interface ParsedChord {
   tonic: string | null;
   /** Tonal quality string (major, minor, diminished, etc.). */
   quality: string;
+  /** Human MIDI core type. */
+  core?: string;
+  /** Human MIDI modifier. */
+  modifier?: string;
   /** Concrete pitch classes that form the chord. */
   notes: string[];
   /** Interval structure reported by Tonal. */
   intervals: string[];
   /** Known aliases for the parsed chord. */
   aliases: string[];
+  /** Optional array of exact MIDI notes received from shared state. */
+  exactMidiNotes?: number[];
 }
 
 /**

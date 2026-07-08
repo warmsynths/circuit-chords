@@ -14,6 +14,9 @@ declare module 'human-engine' {
   export type SharedProgression = any;
   export const encodeProgression: (state: any) => string;
   export const decodeProgression: (encoded: string) => any;
+  export const CHORD_CORES: any[];
+  export const CHORD_MODIFIERS: any[];
+  export const getChordSuffix: (core: string, mod: string) => string;
 }
 
 interface HTMLElementTagNameMap {
