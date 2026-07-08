@@ -2567,10 +2567,10 @@ export class CircuitChordForge extends LitElement {
                         // Tonal.js parsed chord.type
                         const type = activeChord.quality || '';
                         const sym = activeChord.symbol || '';
-                        if (c.value === 'maj' && (type === 'Major' || sym.endsWith('M') || sym.endsWith('maj') || sym.length === activeChord.tonic?.length)) isSelected = true;
+                        if (c.value === 'maj' && (type === 'Major' || (sym.endsWith('M') && type !== 'Diminished' && type !== 'Minor') || sym.endsWith('maj') || sym.length === activeChord.tonic?.length)) isSelected = true;
                         else if (c.value === 'm' && type === 'Minor') isSelected = true;
                         else if (c.value === 'dim' && type === 'Diminished') isSelected = true;
-                        else if (c.value === 'sus4' && sym.includes('sus')) isSelected = true;
+                        else if (c.value === 'sus4' && sym.toLowerCase().includes('sus')) isSelected = true;
                       }
                     }
                     return html`

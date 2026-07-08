@@ -2196,7 +2196,7 @@
               </div>
               <div class="quality-selector-row" style="flex-direction: column; gap: 4px;">
                 <div class="quality-row-group" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px;">
-                  ${this.chordCores.map(a=>{const l=this.progression[this.activeIndex];let h=!1;if(l)if(l.core!==void 0)h=l.core===a.value;else{const u=l.quality||"",d=l.symbol||"";(a.value==="maj"&&(u==="Major"||d.endsWith("M")||d.endsWith("maj")||d.length===l.tonic?.length)||a.value==="m"&&u==="Minor"||a.value==="dim"&&u==="Diminished"||a.value==="sus4"&&d.includes("sus"))&&(h=!0)}return $`
+                  ${this.chordCores.map(a=>{const l=this.progression[this.activeIndex];let h=!1;if(l)if(l.core!==void 0)h=l.core===a.value;else{const u=l.quality||"",d=l.symbol||"";(a.value==="maj"&&(u==="Major"||d.endsWith("M")&&u!=="Diminished"&&u!=="Minor"||d.endsWith("maj")||d.length===l.tonic?.length)||a.value==="m"&&u==="Minor"||a.value==="dim"&&u==="Diminished"||a.value==="sus4"&&d.toLowerCase().includes("sus"))&&(h=!0)}return $`
                       <button 
                         class="quality-pill ${h?"active":""}"
                         @click=${()=>this.changeActiveChordCore(a.value)}
