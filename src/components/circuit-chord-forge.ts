@@ -2265,8 +2265,13 @@ export class CircuitChordForge extends LitElement {
     const rootMidi = activeChord ? (Note.midi((activeChord.tonic ?? 'C') + '4') ?? 60) : 60;
     const activeOffsets = this.voicedOffsets[this.activeIndex] || [];
     const recipe = activeOffsets.map(offset => {
-      const noteName = Note.fromMidi(rootMidi + offset);
-      const pad = pads.find(p => p.midiNote === noteName);
+      const targetMidi = rootMidi + offset;
+      // First try exact MIDI number match (avoids enharmonic string mismatches like Db4 vs C#4)
+      let pad = pads.find(p => p.midiNote ? Note.midi(p.midiNote) === targetMidi : false);
+      // If not found (note below grid range), try one octave up
+      if (!pad) {
+        pad = pads.find(p => p.midiNote ? Note.midi(p.midiNote) === targetMidi + 12 : false);
+      }
       if (pad) {
         return { note: pad.note, row: pad.row, col: pad.col, index: pad.index };
       }
