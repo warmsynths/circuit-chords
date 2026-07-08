@@ -1685,7 +1685,6 @@ export class CircuitChordForge extends LitElement {
     if (this.isDebugMode) {
       this.activePatch = this.getOrCreateMockPatch();
     }
-    this.loadDefaultProgression();
     this.initMidi();
 
     // Dynamically import the human-engine component
@@ -1697,11 +1696,22 @@ export class CircuitChordForge extends LitElement {
       : import('human-engine');
 
     loadEngine
-      .then(() => {
+      .then((engine) => {
         this.humanLoaded = true;
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('state')) {
+          const stateStr = urlParams.get('state')!;
+          const sharedState = engine.decodeProgression(stateStr);
+          if (sharedState && sharedState.chords) {
+            this.applySharedProgression(sharedState);
+            return;
+          }
+        }
+        this.loadDefaultProgression();
       })
       .catch((err) => {
-        console.warn('Could not load human panel:', err);
+        console.warn('Could not load human panel or parse state:', err);
+        this.loadDefaultProgression();
       });
 
     // Apply the initial theme class to host
@@ -1874,6 +1884,45 @@ export class CircuitChordForge extends LitElement {
     this.midiConnected = false;
   }
 
+  private applySharedProgression(sharedState: any) {
+    const parsed = sharedState.chords.map((sc: any) => ({
+      symbol: sc.symbol,
+      tonic: sc.root,
+      quality: sc.quality,
+      notes: sc.midiNotes.map((n: number) => n.toString()), // the parser expects pitch classes here usually, but we store exact notes below
+      intervals: [],
+      aliases: [],
+      exactMidiNotes: sc.midiNotes, // custom field we will use in music-grid
+    }));
+    
+    if (parsed.length > 0) {
+      this.progression = parsed;
+      this.source = 'Shared from Chord Voyager';
+      this.activeIndex = 0;
+      
+      const newOffsets: Record<number, number[]> = {};
+      parsed.forEach((chord: any, i: number) => {
+        if (chord.exactMidiNotes && chord.exactMidiNotes.length > 0) {
+          const rootMidi = Note.midi((chord.tonic ?? 'C') + '4') ?? 60;
+          newOffsets[i] = chord.exactMidiNotes.map((n: number) => n - rootMidi);
+        } else {
+          newOffsets[i] = this.getDefaultVoicedOffsets(chord); 
+        }
+      });
+      this.voicedOffsets = newOffsets;
+
+      const firstChord = parsed[0];
+      const baseKey = this.normalizeKey(firstChord?.tonic) ?? this.config.key;
+      this.originalKey = baseKey;
+      const defaultScale = 'chromatic';
+      this.config = { ...this.config, key: baseKey, scale: defaultScale, mode: 'chromatic' };
+      
+      if (sharedState.humanState) {
+        this.humanState = sharedState.humanState;
+      }
+    }
+  }
+
   private loadDefaultProgression() {
     let search = window.location.search;
     // If a sharp chord (e.g. F#m7) is passed without URL encoding, the browser 
@@ -1882,6 +1931,8 @@ export class CircuitChordForge extends LitElement {
       search += window.location.hash;
     }
     const urlParams = new URLSearchParams(search);
+    if (urlParams.has('state')) return; // handled by async loader
+
     const queryParam = urlParams.get('p');
     const sourceText = queryParam ? queryParam.trim() : 'Cmaj7 Am7 Dm7 G7';
     
@@ -2416,7 +2467,7 @@ export class CircuitChordForge extends LitElement {
         ` : null}
 
         <!-- 4. Right Sidebar (MIDI HUD / Modal on Desktop) -->
-        <settings-panel @device-select=${(e) => this.selectedMidiDevice = e.detail} @channel-select=${(e) => this.selectedMidiChannel = e.detail} @midi-connect=${() => this.connectMidiDevice()} @midi-disconnect=${() => this.disconnectMidiDevice()} @warning-toggle=${(e) => this.toggleScaleWarnings(e.detail)}></settings-panel>
+        <settings-panel @device-select=${(e: CustomEvent) => this.selectedMidiDevice = e.detail} @channel-select=${(e: CustomEvent) => this.selectedMidiChannel = e.detail} @midi-connect=${() => this.connectMidiDevice()} @midi-disconnect=${() => this.disconnectMidiDevice()} @warning-toggle=${(e: CustomEvent) => this.toggleScaleWarnings(e.detail)}></settings-panel>
 
         <!-- Help Sidebar/Modal Panel -->
         <aside class="panel sidebar-help ${this.showHelp ? 'open' : ''}">
@@ -2480,7 +2531,7 @@ export class CircuitChordForge extends LitElement {
             <div class="footer-drawer-content">
               <div class="footer-voicing-row">
                 <span class="footer-voicing-label">Voicing</span>
-                ${html`<voicing-keyboard @keyboard-pointer-down=${(e) => this.onKeyboardPointerDown(e.detail)} @keyboard-pointer-move=${(e) => this.onKeyboardPointerMove(e.detail)} @keyboard-pointer-up=${(e) => { const ev = e.detail; ev.target = {tagName: ev.midi ? 'rect' : 'svg', getAttribute: () => ev.midi}; this.onKeyboardPointerUp(ev); }} @keyboard-wheel=${(e) => { const ev = e.detail; ev.preventDefault = () => {}; this.onKeyboardWheel(ev); }}></voicing-keyboard>`}
+                ${html`<voicing-keyboard @keyboard-pointer-down=${(e: CustomEvent) => this.onKeyboardPointerDown(e.detail)} @keyboard-pointer-move=${(e: CustomEvent) => this.onKeyboardPointerMove(e.detail)} @keyboard-pointer-up=${(e: CustomEvent) => { const ev = e.detail; ev.target = {tagName: ev.midi ? 'rect' : 'svg', getAttribute: () => ev.midi}; this.onKeyboardPointerUp(ev); }} @keyboard-wheel=${(e: CustomEvent) => { const ev = e.detail; ev.preventDefault = () => {}; this.onKeyboardWheel(ev); }}></voicing-keyboard>`}
               </div>
               <div class="quality-selector-row">
                 ${[

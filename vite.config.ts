@@ -7,7 +7,7 @@ export default defineConfig({
   },
   base: '/circuit-chords/',
   server: {
-    port: 5173,
+    port: 8801,
     fs: {
       allow: ['..']
     }
