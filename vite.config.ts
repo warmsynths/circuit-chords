@@ -4,8 +4,15 @@ import { resolve } from 'path';
 export default defineConfig({
   build: {
     outDir: 'docs',
+    rollupOptions: {
+      output: {
+        entryFileNames: 'app.js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+      },
+    },
   },
-  base: '/circuit-chords/',
+  base: './',
   server: {
     port: 43302,
     fs: {
