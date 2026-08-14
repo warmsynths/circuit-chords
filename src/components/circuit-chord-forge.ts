@@ -61,14 +61,40 @@ export class CircuitChordForge extends LitElement {
     :host {
       display: block;
       min-height: 100vh;
-      background: #17181c;
-      color: #eef0f3;
-      font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-      box-sizing: border-box;
+      background: #17181c; /* Deep studio grey/black */
+      color: #e8e9ec;
+      font-family: 'Inter', system-ui, sans-serif;
+      --pad-gap: 8px;
+      --plate-bg: #1c1e23;
+    }
+
+    /* Custom Scrollbars for Sleek Desktop UI */
+    ::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
 
     *, *::before, *::after {
       box-sizing: border-box;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
     }
 
     @keyframes plateIn {
@@ -826,14 +852,21 @@ export class CircuitChordForge extends LitElement {
         font-size: 2.5rem;
       }
       .pad-grid {
-        grid-template-columns: repeat(8, 44px);
+        grid-template-columns: repeat(8, 1fr);
+        gap: 4px;
       }
       .col-markers {
-        grid-template-columns: 28px repeat(8, 44px);
-        min-width: 388px;
+        grid-template-columns: 22px repeat(8, 1fr);
+        gap: 4px;
+        min-width: 0;
       }
       .grid-with-row-nums {
-        min-width: 388px;
+        grid-template-columns: 22px 1fr;
+        gap: 4px;
+        min-width: 0;
+      }
+      .row-markers {
+        gap: 4px;
       }
       .step-tile {
         flex: 0 0 148px;
