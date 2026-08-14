@@ -1,154 +1,116 @@
-import * as Tone from 'tone';
+// Instant Web Audio Dual-Oscillator Warm Synth Engine
 
-// Limiter/compressor to prevent clipping when multiple notes play simultaneously.
-// Tuned to act transparently — fast attack/release catches peaks without audible pumping.
-const limiter = new Tone.Compressor({
-  threshold: -6,   // Start compressing when summed signal nears 0 dBFS
-  ratio: 20,       // High ratio makes it behave like a limiter
-  attack: 0.002,   // 2ms attack — fast enough to catch transient peaks
-  release: 0.1,    // 100ms release — quick recovery without pumping artifacts
-  knee: 3,         // Slight soft knee for transparent sound
-}).toDestination();
+let audioCtx: AudioContext | null = null;
+let masterBus: GainNode | null = null;
+let filterNode: BiquadFilterNode | null = null;
 
-// High-quality sampled 1977 Rhodes Mark I Stage 73 electric piano
-// Sourced from J. Learman open-source CC0 samples hosted via GitHub Pages
-const sampler = new Tone.Sampler({
-  urls: {
-    "F1": "A_029__F1_5.m4a",
-    "B1": "A_035__B1_5.m4a",
-    "E2": "A_040__E2_5.m4a",
-    "A2": "A_045__A2_5.m4a",
-    "D3": "A_050__D3_5.m4a",
-    "G3": "A_055__G3_5.m4a",
-    "B3": "A_059__B3_5.m4a",
-    "D4": "A_062__D4_5.m4a",
-    "F4": "A_065__F4_5.m4a",
-    "B4": "A_071__B4_5.m4a",
-    "E5": "A_076__E5_5.m4a",
-    "A5": "A_081__A5_5.m4a",
-    "D6": "A_086__D6_5.m4a",
-    "G6": "A_091__G6_5.m4a"
-  },
-  baseUrl: "https://danigb.github.io/samples/jlearman/rhodes-mki/jRhodes3d-mono/",
-  // Lowered base volume so stacked notes have headroom before the limiter kicks in.
-  // Each additional note adds ~3dB of summed energy, so we give ourselves room.
-  volume: -12,
-  onload: () => {
-    console.log("Rhodes piano sampler loaded successfully!");
-  },
-  onerror: (err) => {
-    console.warn("Failed to load Rhodes piano sampler:", err);
-  }
-}).connect(limiter);
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return null;
+    audioCtx = new AudioContextClass();
+    masterBus = audioCtx.createGain();
+    masterBus.gain.value = 0.5;
 
-/**
- * Plays a single note using the sampled Rhodes electric piano.
- * Audio playback only proceeds if the Tone.js audio context is in the 'running' state.
- *
- * @param noteName Note name with octave, e.g. "C4" or "D#5".
- * @param duration Duration in seconds.
- */
-export function playNote(noteName: string, duration = 0.35): void {
-  if (Tone.context.state !== 'running') {
-    console.warn("Audio playback skipped: AudioContext is suspended. Click the audio icon in the header to enable.");
-    return;
+    filterNode = audioCtx.createBiquadFilter();
+    filterNode.type = 'lowpass';
+    filterNode.frequency.value = 2600;
+    filterNode.Q.value = 0.6;
+
+    masterBus.connect(filterNode);
+    filterNode.connect(audioCtx.destination);
   }
-  try {
-    sampler.triggerAttackRelease(noteName, duration);
-  } catch (e) {
-    console.warn("Audio playback failed:", e);
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
   }
+  return audioCtx;
 }
 
-/**
- * Plays a chord of notes simultaneously using the sampled Rhodes electric piano.
- * Audio playback only proceeds if the Tone.js audio context is in the 'running' state.
- * Velocity is scaled down proportionally to the number of notes to prevent
- * the summed signal from clipping before reaching the limiter.
- *
- * @param noteNames Array of note names with octaves.
- * @param duration Duration in seconds.
- */
-export function playChord(noteNames: string[], duration = 0.7, humanState?: any): void {
-  if (Tone.context.state !== 'running') {
-    console.warn("Audio playback skipped: AudioContext is suspended. Click the audio icon in the header to enable.");
-    return;
-  }
-  try {
-    const count = noteNames.length;
-    const densityScaling = count <= 1 ? 1 : Math.max(0.4, 1 / Math.sqrt(count));
-    const now = Tone.now();
+function midiToFrequency(midi: number): number {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
 
-    noteNames.forEach((noteName, index) => {
-      let stagger = 0;
-      let vel = 1.0;
-      let dur = duration;
+function parseMidiNumber(note: number | string): number {
+  if (typeof note === 'number') return note;
+  // Parse note name like C4, D#3, etc.
+  const match = note.match(/^([A-Ga-g][#b]?)(-?\d+)$/);
+  if (!match) return 60; // fallback to C4
+  const name = match[1].toUpperCase();
+  const oct = parseInt(match[2], 10);
+  const noteMap: Record<string, number> = {
+    'C': 0, 'C#': 1, 'DB': 1, 'D': 2, 'D#': 3, 'EB': 3,
+    'E': 4, 'F': 5, 'F#': 6, 'GB': 6, 'G': 7, 'G#': 8,
+    'AB': 8, 'A': 9, 'A#': 10, 'BB': 10, 'B': 11
+  };
+  const semi = noteMap[name] ?? 0;
+  return (oct + 1) * 12 + semi;
+}
 
-      if (humanState) {
-        const { minVelocity, maxVelocity, spread, microTiming, humanVariance, duration: hDuration } = humanState;
-        
-        // Random velocity between minVelocity and maxVelocity (0 to 127) scaled to 0-1 range
-        const rawVel = (minVelocity + Math.random() * (maxVelocity - minVelocity)) / 127;
-        vel = rawVel * densityScaling;
+export function playChord(notes: (number | string)[], duration = 1.15): void {
+  const ctx = getAudioContext();
+  if (!ctx || !masterBus) return;
 
-        // Spread/microtiming/variance offset in seconds
-        const spreadOffset = index * spread * 0.1;
-        const microTimingOffset = (Math.random() - 0.5) * microTiming * 0.05;
-        const varianceOffset = (Math.random() - 0.5) * humanVariance * 0.03;
-        
-        stagger = Math.max(0, spreadOffset + microTimingOffset + varianceOffset);
-        
-        // Calculate duration scaled by human settings duration and randomized by humanVariance
-        dur = hDuration * (1.0 + (Math.random() - 0.5) * 0.2 * humanVariance);
-      } else {
-        vel = densityScaling;
-      }
+  const t0 = ctx.currentTime + 0.015;
+  const d = Math.max(0.2, duration);
+  const midis = notes.map(parseMidiNumber);
 
-      sampler.triggerAttackRelease(noteName, dur, now + stagger, vel);
+  midis.forEach((midi, i) => {
+    const freq = midiToFrequency(midi);
+    const gainNode = ctx.createGain();
+    const startTime = t0 + i * 0.028;
+
+    gainNode.gain.setValueAtTime(0.0001, startTime);
+    gainNode.gain.linearRampToValueAtTime(0.16, startTime + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.055, startTime + 0.22);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + d);
+
+    gainNode.connect(masterBus!);
+
+    // Dual oscillators: Triangle + Sine (detuned by -5 cents)
+    const oscConfigs = [
+      { type: 'triangle' as OscillatorType, cents: 0 },
+      { type: 'sine' as OscillatorType, cents: -5 }
+    ];
+
+    oscConfigs.forEach(({ type, cents }) => {
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.value = freq * Math.pow(2, cents / 1200);
+      osc.connect(gainNode);
+      osc.start(startTime);
+      osc.stop(startTime + d + 0.05);
     });
-  } catch (e) {
-    console.warn("Audio playback failed:", e);
-  }
+  });
 }
 
-/**
- * Starts Tone.js audio context and waits for samples to load.
- * Plays a soft C4 Rhodes note to confirm sound is active.
- */
+export function playNote(note: number | string, duration = 0.6): void {
+  playChord([note], duration);
+}
+
 export async function startAudio(): Promise<void> {
-  await Tone.start();
-  await Tone.loaded();
-  // Play a soft verification note on activation
-  sampler.triggerAttackRelease("C4", "8n");
-}
-
-/**
- * Suspends Tone.js audio context.
- */
-export async function suspendAudio(): Promise<void> {
-  if (Tone.context && Tone.context.rawContext) {
-    await (Tone.context.rawContext as AudioContext).suspend();
+  const ctx = getAudioContext();
+  if (ctx && ctx.state === 'suspended') {
+    await ctx.resume();
   }
 }
 
-/**
- * Checks if Tone.js audio context is active/running.
- */
-export function isAudioActive(): boolean {
-  return Tone.context.state === 'running';
+export async function suspendAudio(): Promise<void> {
+  if (audioCtx && audioCtx.state === 'running') {
+    await audioCtx.suspend();
+  }
 }
 
-/**
- * Registers a statechange event listener on the native AudioContext.
- * Returns a function to clean up/remove the event listener.
- */
+export function isAudioActive(): boolean {
+  return !!audioCtx && audioCtx.state === 'running';
+}
+
 export function registerAudioStateListener(listener: (state: AudioContextState) => void): () => void {
-  const ctx = Tone.context.rawContext as AudioContext;
-  if (ctx && typeof ctx.addEventListener === 'function') {
-    const callback = () => listener(ctx.state);
-    ctx.addEventListener('statechange', callback);
-    return () => ctx.removeEventListener('statechange', callback);
+  const ctx = getAudioContext();
+  if (ctx) {
+    const cb = () => listener(ctx.state);
+    ctx.addEventListener('statechange', cb);
+    return () => ctx.removeEventListener('statechange', cb);
   }
   return () => {};
 }
-

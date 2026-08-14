@@ -1,6 +1,3 @@
-import './components/chord-input';
-import './components/progression-stepper';
-import './components/circuit-grid';
 import './components/circuit-chord-forge';
 
-// Entry point file. Application logic has been moved to circuit-chord-forge.ts
+// Entry point: Mounts the Direction C2 Circuit Chord Forge application

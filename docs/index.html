@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Circuit Chord Forge</title>
+    <title>Circuit Chords</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <!-- Google Fonts -->
+    <!-- Google Fonts: Space Grotesk & IBM Plex Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     
     <style>
       * {
@@ -17,12 +17,18 @@
       html, body {
         margin: 0;
         padding: 0;
-        height: 100vh;
-        height: 100dvh;
-        width: 100vw;
-        overflow: hidden;
-        background: #121316;
-        color: white;
+        min-height: 100vh;
+        background: #17181c;
+        color: #eef0f3;
+        font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      }
+      ::selection {
+        background: #d1608f;
+        color: #17181c;
+      }
+      *:focus-visible {
+        outline: 1px solid #5cc9d1;
+        outline-offset: 2px;
       }
     </style>
     <script type="module" crossorigin src="./app.js"></script>
