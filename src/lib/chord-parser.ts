@@ -1,4 +1,5 @@
-import { Chord } from 'tonal';
+import { Chord, Note } from 'tonal';
+import type { ProgressionStep } from './pad-plot';
 
 /**
  * Normalized musical metadata extracted from a chord symbol.
@@ -129,3 +130,75 @@ export function parseProgression(source: string): ParsedChord[] {
 
   return parsed;
 }
+
+/**
+ * Maps a ParsedChord to a ProgressionStep ({ root: 0..11, q: string }).
+ * Maps any standard chord quality, extension, or alteration to one of the 12
+ * qualities supported by the Circuit Pad Plot grid.
+ *
+ * @param chord Parsed chord metadata from Tonal.
+ * @returns ProgressionStep with pitch class root (0..11) and quality id.
+ */
+export function parsedChordToStep(chord: ParsedChord): ProgressionStep {
+  const root = chord.tonic
+    ? (Note.chroma(chord.tonic) ?? ((Note.midi(chord.tonic + '4') ?? 60) % 12))
+    : 0;
+
+  const symbol = chord.symbol || '';
+  const [, rawSuffix] = Chord.tokenize(symbol);
+  const suffix = (rawSuffix || '').trim();
+  const quality = (chord.quality || '').toLowerCase();
+
+  let q = 'maj';
+
+  if (/m7b5|min7b5|m7-5|half|ø/i.test(suffix) || quality.includes('half-diminished')) {
+    q = 'm7b5';
+  } else if (/dim|°/i.test(suffix) || quality.includes('diminished')) {
+    q = 'dim';
+  } else if (/aug|\+/i.test(suffix) || quality.includes('augmented')) {
+    q = 'aug';
+  } else if (/sus2/i.test(suffix)) {
+    q = 'sus2';
+  } else if (/sus4|sus/i.test(suffix)) {
+    q = 'sus4';
+  } else if (/add9|add2/i.test(suffix)) {
+    q = 'add9';
+  } else if (/^(?:6|add6|maj6)$/i.test(suffix)) {
+    q = '6';
+  } else if (
+    /maj7|maj9|maj11|maj13|Δ|ma7/i.test(suffix) ||
+    suffix.includes('M7') ||
+    suffix.includes('M9') ||
+    suffix.includes('M11') ||
+    suffix.includes('M13') ||
+    (quality === 'major' && (chord.aliases?.some(a => /maj7|M7|Δ/i.test(a)) ?? false))
+  ) {
+    q = 'maj7';
+  } else if (
+    /^(?:m7|min7|-7|m9|min9|-9|m11|min11|m13|min13|m6|min6)$/i.test(suffix) ||
+    (quality === 'minor' && (chord.intervals?.includes('10m') || chord.intervals?.includes('10d') || /7|9|11|13/.test(suffix)))
+  ) {
+    q = 'm7';
+  } else if (/^(?:7|9|11|13|dom|dom7|7b9|7#9|7b5|7#5|7alt)$/i.test(suffix) || (quality === 'major' && /7|9|11|13/.test(suffix))) {
+    q = '7';
+  } else if (quality === 'minor' || /^(?:m|min|-)$/i.test(suffix)) {
+    q = 'min';
+  } else if (quality === 'major' || /^(?:maj|m)?$/i.test(suffix)) {
+    q = 'maj';
+  }
+
+  return { root, q };
+}
+
+/**
+ * Parses freeform progression text directly into an array of ProgressionStep objects
+ * (capped at 16 steps for Circuit Tracks hardware compatibility).
+ *
+ * @param source Freeform progression text (e.g. from query string "Cmaj7 Am7 Dm7 G7").
+ * @returns Array of ProgressionStep objects.
+ */
+export function parseProgressionToSteps(source: string): ProgressionStep[] {
+  const parsed = parseProgression(source);
+  return parsed.map(parsedChordToStep).slice(0, 16);
+}
+

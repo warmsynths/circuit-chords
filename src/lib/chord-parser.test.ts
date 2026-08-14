@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitize, tokenize, normalizeQuality, parseProgression } from './chord-parser';
+import { sanitize, tokenize, normalizeQuality, parseProgression, parseProgressionToSteps, parsedChordToStep } from './chord-parser';
 
 // ─── sanitize ─────────────────────────────────────────────────────────────────
 
@@ -375,3 +375,80 @@ describe('parseProgression', () => {
     expect(Array.isArray(result[0].aliases)).toBe(true);
   });
 });
+
+// ─── parseProgressionToSteps & parsedChordToStep ───────────────────────────────
+
+describe('parseProgressionToSteps', () => {
+  it('parses standard 4-chord progression into ProgressionStep array', () => {
+    const steps = parseProgressionToSteps('Cmaj7 Am7 Dm7 G7');
+    expect(steps).toEqual([
+      { root: 0, q: 'maj7' },
+      { root: 9, q: 'm7' },
+      { root: 2, q: 'm7' },
+      { root: 7, q: '7' }
+    ]);
+  });
+
+  it('handles sharp and flat root accidentals correctly', () => {
+    const steps = parseProgressionToSteps('F#m7 B7 Emaj7');
+    expect(steps).toEqual([
+      { root: 6, q: 'm7' },
+      { root: 11, q: '7' },
+      { root: 4, q: 'maj7' }
+    ]);
+
+    const flatSteps = parseProgressionToSteps('Bbm7 Eb7 Abmaj7');
+    expect(flatSteps).toEqual([
+      { root: 10, q: 'm7' },
+      { root: 3, q: '7' },
+      { root: 8, q: 'maj7' }
+    ]);
+  });
+
+  it('maps extended chords and special chord qualities to valid QUALS', () => {
+    const steps = parseProgressionToSteps('Dm9 G13 Cmaj9 Bm7b5 Bdim Caug Csus2 Csus4 C6 Cadd9');
+    expect(steps).toEqual([
+      { root: 2, q: 'm7' },
+      { root: 7, q: '7' },
+      { root: 0, q: 'maj7' },
+      { root: 11, q: 'm7b5' },
+      { root: 11, q: 'dim' },
+      { root: 0, q: 'aug' },
+      { root: 0, q: 'sus2' },
+      { root: 0, q: 'sus4' },
+      { root: 0, q: '6' },
+      { root: 0, q: 'add9' }
+    ]);
+  });
+
+  it('handles triads (major and minor)', () => {
+    const steps = parseProgressionToSteps('C Am F G');
+    expect(steps).toEqual([
+      { root: 0, q: 'maj' },
+      { root: 9, q: 'min' },
+      { root: 5, q: 'maj' },
+      { root: 7, q: 'maj' }
+    ]);
+  });
+
+  it('handles dashed / bar-separated query progression strings', () => {
+    const steps = parseProgressionToSteps('Dm7 - G7 - Cmaj7');
+    expect(steps).toEqual([
+      { root: 2, q: 'm7' },
+      { root: 7, q: '7' },
+      { root: 0, q: 'maj7' }
+    ]);
+  });
+
+  it('caps output at 16 steps max', () => {
+    const chords20 = Array(20).fill('Cmaj7').join(' ');
+    const steps = parseProgressionToSteps(chords20);
+    expect(steps).toHaveLength(16);
+  });
+
+  it('returns empty array for invalid input', () => {
+    expect(parseProgressionToSteps('gibberish non-chord')).toEqual([]);
+    expect(parseProgressionToSteps('')).toEqual([]);
+  });
+});
+

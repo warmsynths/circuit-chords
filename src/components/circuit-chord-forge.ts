@@ -22,6 +22,7 @@ import {
   type VoicedTone
 } from '../lib/pad-plot';
 import { playChord, playNote } from '../lib/audio';
+import { parseProgressionToSteps } from '../lib/chord-parser';
 
 const STORAGE_KEY = 'circuit_chords_v2_state';
 
@@ -876,7 +877,7 @@ export class CircuitChordForge extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.loadPersistedState();
+    this.loadInitialState();
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('resize', this.handleResize);
   }
@@ -924,6 +925,63 @@ export class CircuitChordForge extends LitElement {
       this.auditionActive();
     }
   };
+
+  private loadInitialState() {
+    let search = typeof window !== 'undefined' ? window.location.search : '';
+    // If a sharp chord (e.g. F#m7) is passed without URL encoding, the browser
+    // splits the string at the '#' into location.search and location.hash.
+    if (typeof window !== 'undefined' && window.location.hash && !window.location.hash.startsWith('#/')) {
+      search += window.location.hash;
+    }
+    const urlParams = new URLSearchParams(search);
+    const progressionQuery = urlParams.get('p') || urlParams.get('progression');
+
+    if (progressionQuery && progressionQuery.trim()) {
+      const parsedSteps = parseProgressionToSteps(progressionQuery.trim());
+      if (parsedSteps.length > 0) {
+        this.steps = parsedSteps;
+        this.active = 0;
+        const firstStep = parsedSteps[0];
+        this.keyRoot = firstStep.root;
+        this.keyMode = (['min', 'm7', 'm7b5', 'dim'].includes(firstStep.q)) ? 'minor' : 'major';
+
+        // Optional query param overrides if provided
+        if (urlParams.has('key')) {
+          const keyParam = urlParams.get('key')!;
+          const keyNum = parseInt(keyParam, 10);
+          if (!isNaN(keyNum) && keyNum >= 0 && keyNum <= 11) {
+            this.keyRoot = keyNum;
+          } else {
+            const idx = NOTE_NAMES.indexOf(keyParam.toUpperCase() as any);
+            if (idx >= 0) this.keyRoot = idx;
+          }
+        }
+        if (urlParams.has('mode')) {
+          const modeParam = urlParams.get('mode')!.toLowerCase();
+          if (modeParam === 'major' || modeParam === 'minor') {
+            this.keyMode = modeParam;
+          }
+        }
+        if (urlParams.has('octave')) {
+          const octParam = parseInt(urlParams.get('octave')!, 10);
+          if (!isNaN(octParam) && octParam >= 1 && octParam <= 6) {
+            this.octave = octParam;
+          }
+        }
+        if (urlParams.has('layout')) {
+          const layoutParam = urlParams.get('layout')!;
+          if (layoutParam === 'chromatic' || layoutParam === 'in-key') {
+            this.layout = layoutParam;
+          }
+        }
+
+        this.persistState();
+        return;
+      }
+    }
+
+    this.loadPersistedState();
+  }
 
   private loadPersistedState() {
     try {
