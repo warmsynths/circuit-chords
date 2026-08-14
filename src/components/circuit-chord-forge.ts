@@ -435,13 +435,13 @@ export class CircuitChordForge extends LitElement {
     }
 
     .plate-scroll-wrap {
-      overflow-x: auto;
+      /* No overflow-x auto to prevent unwanted scrollbars on desktop during bloom transforms */
     }
 
     .col-markers {
       display: grid;
       grid-template-columns: 28px repeat(8, 1fr);
-      gap: 7px;
+      gap: 8px;
       margin-bottom: 8px;
     }
 
@@ -455,7 +455,7 @@ export class CircuitChordForge extends LitElement {
     .grid-with-row-nums {
       display: grid;
       grid-template-columns: 28px 1fr;
-      gap: 7px;
+      gap: 8px;
     }
 
     .row-markers {
@@ -814,15 +814,6 @@ export class CircuitChordForge extends LitElement {
 
     .shortcut-key {
       color: #c8cad0;
-    }
-
-    /* Footer Note */
-    .footer-desc {
-      max-width: 640px;
-      margin-top: 52px;
-      color: #868b94;
-      font-size: 0.82rem;
-      line-height: 1.7;
     }
 
     /* Responsive Breakpoints */
@@ -1646,10 +1637,6 @@ export class CircuitChordForge extends LitElement {
               </div>
             </div>
           </div>
-        </div>
-
-        <div class="footer-desc">
-          Pick a root and quality, or tap a chord from the key. The plate lights the exact pads to hold on Circuit Tracks — nothing is drawn over them. Each progression step keeps its own miniature plot, so the shape of a change is visible before you press anything.
         </div>
       </div>
     `;
