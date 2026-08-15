@@ -874,6 +874,81 @@ export class CircuitChordForge extends LitElement {
       color: #c8cad0;
     }
 
+    /* Bottom Links Footer */
+    .app-links-footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding-top: 32px;
+      margin-top: 56px;
+      border-top: 1px solid #26282e;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      color: #868b94;
+      flex-wrap: wrap;
+    }
+
+    .footer-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #8d919a;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 220ms ease, transform 220ms ease;
+    }
+
+    .footer-link:hover {
+      color: #5cc9d1;
+      transform: translateY(-1px);
+    }
+
+    .footer-link-highlight {
+      color: #c8cad0;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 220ms ease;
+    }
+
+    .footer-link-highlight:hover {
+      color: #5cc9d1;
+      text-decoration: underline;
+    }
+
+    .footer-divider {
+      color: #2e3138;
+      user-select: none;
+    }
+
+    .footer-icon {
+      flex-shrink: 0;
+      transition: stroke 220ms ease;
+    }
+
+    .footer-link:hover .footer-icon {
+      stroke: #5cc9d1;
+    }
+
+    .heart-icon {
+      display: inline-block;
+      transition: transform 220ms ease;
+      margin: 0 2px;
+    }
+
+    .footer-text:hover .heart-icon {
+      transform: scale(1.25);
+    }
+
+    .coffee-icon {
+      display: inline-block;
+      transition: transform 220ms ease;
+    }
+
+    .footer-link:hover .coffee-icon {
+      transform: rotate(12deg) scale(1.15);
+    }
+
     /* Responsive Breakpoints */
     @media (max-width: 1080px) {
       .container {
@@ -920,6 +995,12 @@ export class CircuitChordForge extends LitElement {
       }
       .step-tile {
         flex: 0 0 148px;
+      }
+      .app-links-footer {
+        margin-top: 36px;
+        padding-top: 24px;
+        gap: 12px;
+        font-size: 0.68rem;
       }
     }
   `;
@@ -1736,6 +1817,25 @@ export class CircuitChordForge extends LitElement {
             </div>
           </div>
         </div>
+
+        <!-- Bottom Links Footer -->
+        <footer class="app-links-footer">
+          <a href="https://github.com/warmsynths/circuit-chords" target="_blank" rel="noopener noreferrer" class="footer-link">
+            <svg class="footer-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+            GitHub
+          </a>
+          <span class="footer-divider">|</span>
+          <span class="footer-text">
+            Made with <span class="heart-icon">💖</span> by <a href="mailto:warmsynthsiloveyou@gmail.com" class="footer-link-highlight">warmsynths</a>
+          </span>
+          <span class="footer-divider">|</span>
+          <a href="https://ko-fi.com/warmsynths" target="_blank" rel="noopener noreferrer" class="footer-link">
+            <span class="coffee-icon">☕</span>
+            Support on Ko-fi
+          </a>
+        </footer>
       </div>
     `;
   }
