@@ -44,6 +44,88 @@ export const DIA_MIN_QUALS = ['m7', 'm7b5', 'maj7', 'm7', 'm7', 'maj7', '7'];
 export const ROMAN_MAJ = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii'];
 export const ROMAN_MIN = ['i', 'ii', 'III', 'iv', 'v', 'VI', 'VII'];
 
+export const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+
+export interface ScaleDefinition {
+  id: string;
+  label: string;
+  iv: number[]; // semitone intervals from root
+}
+
+// All 16 scales on Circuit Tracks, in hardware order
+export const SCALES: ScaleDefinition[] = [
+  { id: 'natminor', label: 'nat minor',   iv: [0, 2, 3, 5, 7, 8, 10] },
+  { id: 'major',    label: 'major',       iv: [0, 2, 4, 5, 7, 9, 11] },
+  { id: 'dorian',   label: 'dorian',      iv: [0, 2, 3, 5, 7, 9, 10] },
+  { id: 'phrygian', label: 'phrygian',    iv: [0, 1, 3, 5, 7, 8, 10] },
+  { id: 'mixo',     label: 'mixolydian',  iv: [0, 2, 4, 5, 7, 9, 10] },
+  { id: 'melmin',   label: 'mel minor',   iv: [0, 2, 3, 5, 7, 9, 11] },
+  { id: 'harmmin',  label: 'harm minor',  iv: [0, 2, 3, 5, 7, 8, 11] },
+  { id: 'bebop',    label: 'bebop dorian',iv: [0, 2, 3, 4, 5, 7, 9, 10] },
+  { id: 'blues',    label: 'blues',       iv: [0, 3, 5, 6, 7, 10] },
+  { id: 'minpent',  label: 'min pent',    iv: [0, 3, 5, 7, 10] },
+  { id: 'hungmin',  label: 'hung minor',  iv: [0, 2, 3, 6, 7, 8, 11] },
+  { id: 'ukrdom',   label: 'ukr dominant',iv: [0, 2, 3, 6, 7, 9, 10] },
+  { id: 'marva',    label: 'marva',       iv: [0, 1, 4, 6, 7, 9, 11] },
+  { id: 'todi',     label: 'todi',        iv: [0, 1, 3, 6, 7, 8, 11] },
+  { id: 'wholetone',label: 'whole tone',  iv: [0, 2, 4, 6, 8, 10] },
+  { id: 'chromatic',label: 'chromatic',   iv: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] }
+];
+
+export function getScaleDefinition(scaleIdOrMode: string): ScaleDefinition {
+  const norm = scaleIdOrMode === 'minor' ? 'natminor' : scaleIdOrMode;
+  return SCALES.find(s => s.id === norm) || SCALES[1]; // default major
+}
+
+export interface ScaleChord {
+  root: number;
+  q: string;
+  roman: string; // Roman numeral e.g. "I", "ii"
+  label: string; // Chord symbol e.g. "C", "Dm", "Bdim"
+}
+
+// Triads built dynamically by stacking scale steps — works for any of the 16 scales
+export function getScaleChords(keyRoot: number, keyScale: string): ScaleChord[] {
+  const scDef = getScaleDefinition(keyScale);
+  const sc = scDef.iv;
+  const n = sc.length;
+  if (n < 5 || scDef.id === 'chromatic') return [];
+  const at = (i: number) => sc[i % n] + 12 * Math.floor(i / n);
+
+  const chords: ScaleChord[] = [];
+  for (let i = 0; i < n; i++) {
+    const r = at(i);
+    const third = at(i + 2) - r;
+    const fifth = at(i + 4) - r;
+    let q: string | null = null;
+    if (third === 4 && fifth === 7) q = 'maj';
+    else if (third === 3 && fifth === 7) q = 'min';
+    else if (third === 3 && fifth === 6) q = 'dim';
+    else if (third === 4 && fifth === 8) q = 'aug';
+    else if (third === 5 && fifth === 7) q = 'sus4';
+    else if (third === 2 && fifth === 7) q = 'sus2';
+
+    if (q) {
+      const num = ROMAN[i] || `${i + 1}`;
+      const upper = q === 'maj' || q === 'aug' || q === 'sus4' || q === 'sus2';
+      const roman = upper ? num : num.toLowerCase();
+      const chordRoot = (keyRoot + sc[i]) % 12;
+      const rootName = NOTE_NAMES[chordRoot];
+      const qual = getChordQuality(q);
+      const qSuffix = q === 'maj' ? '' : q === 'min' ? 'm' : qual.label;
+      const chordSymbol = `${rootName}${qSuffix}`;
+
+      chords.push({
+        root: chordRoot,
+        q,
+        roman,
+        label: chordSymbol
+      });
+    }
+  }
+  return chords;
+}
+
 export const NAT = [0, 2, 4, 5, 7, 9, 11, 12];
 export const ACC = [null, 1, 3, null, 6, 8, 10, null];
 
@@ -90,8 +172,8 @@ export function getChordLabel(step: ProgressionStep): string {
   return `${rootName}${qSuffix}`;
 }
 
-export function isNoteInKey(pitchClass: number, keyRoot: number, keyMode: 'major' | 'minor'): boolean {
-  const scale = keyMode === 'major' ? MAJOR_SCALE : MINOR_SCALE;
+export function isNoteInKey(pitchClass: number, keyRoot: number, keyScale: string): boolean {
+  const scale = getScaleDefinition(keyScale).iv;
   return scale.some(deg => (keyRoot + deg) % 12 === (pitchClass % 12 + 12) % 12);
 }
 
@@ -109,7 +191,7 @@ export function calculateVoicing(step: ProgressionStep, octave: number): VoicedT
 /**
  * Builds the 32-pad grid (top row = 4, bottom row = 1).
  */
-export function buildGridCells(layout: 'chromatic' | 'in-key', octave: number, keyRoot: number, keyMode: 'major' | 'minor'): GridCell[] {
+export function buildGridCells(layout: 'chromatic' | 'in-key', octave: number, keyRoot: number, keyScale: string): GridCell[] {
   const cells: GridCell[] = [];
   if (layout === 'chromatic') {
     const rows = [
@@ -124,12 +206,12 @@ export function buildGridCells(layout: 'chromatic' | 'in-key', octave: number, k
       });
     });
   } else {
-    const scale = keyMode === 'major' ? MAJOR_SCALE : MINOR_SCALE;
+    const sc = getScaleDefinition(keyScale).iv;
+    const n = sc.length;
     for (let ri = 3; ri >= 0; ri--) {
       for (let ci = 0; ci < 8; ci++) {
-        const deg = ci % 7;
-        const extra = Math.floor(ci / 7);
-        const m = midiFromOctaveAndSemi(octave + ri + extra, keyRoot + scale[deg]);
+        const idx = ri * 8 + ci;
+        const m = midiFromOctaveAndSemi(octave + Math.floor(idx / n), keyRoot + sc[idx % n]);
         cells.push({ midi: m, row: ri + 1, col: ci + 1 });
       }
     }
@@ -149,9 +231,9 @@ export function calculateLitPads(
   octave: number,
   layout: 'chromatic' | 'in-key',
   keyRoot: number,
-  keyMode: 'major' | 'minor'
+  keyScale: string
 ): LitResult {
-  const cells = buildGridCells(layout, octave, keyRoot, keyMode);
+  const cells = buildGridCells(layout, octave, keyRoot, keyScale);
   const tones = calculateVoicing(step, octave);
   const litMap = new Map<number, PadLitInfo>();
   const missingTones: VoicedTone[] = [];

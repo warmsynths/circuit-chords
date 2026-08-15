@@ -1,15 +1,13 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import { keyed } from 'lit/directives/keyed.js';
 import {
   NOTE_NAMES,
   QUALS,
   DEGREES,
-  MAJOR_SCALE,
-  MINOR_SCALE,
-  DIA_MAJ_QUALS,
-  DIA_MIN_QUALS,
-  ROMAN_MAJ,
-  ROMAN_MIN,
+  SCALES,
+  getScaleDefinition,
+  getScaleChords,
   getPitchName,
   getChordLabel,
   isNoteInKey,
@@ -19,7 +17,9 @@ import {
   type ProgressionStep,
   type GridCell,
   type PadLitInfo,
-  type VoicedTone
+  type VoicedTone,
+  type ScaleDefinition,
+  type ScaleChord
 } from '../lib/pad-plot';
 import { playChord, playNote } from '../lib/audio';
 import { parseProgressionToSteps } from '../lib/chord-parser';
@@ -30,9 +30,10 @@ interface SavedState {
   steps: ProgressionStep[];
   active: number;
   keyRoot: number;
-  keyMode: 'major' | 'minor';
+  keyScale?: string;
+  keyMode?: 'major' | 'minor';
   octave: number;
-  layout: 'chromatic' | 'in-key';
+  layout?: 'chromatic' | 'in-key';
 }
 
 const DEFAULT_STEPS: ProgressionStep[] = [
@@ -47,13 +48,17 @@ export class CircuitChordForge extends LitElement {
   @state() private steps: ProgressionStep[] = DEFAULT_STEPS;
   @state() private active = 0;
   @state() private keyRoot = 0;
-  @state() private keyMode: 'major' | 'minor' = 'major';
+  @state() private keyScale = 'major';
   @state() private octave = 3;
-  @state() private layout: 'chromatic' | 'in-key' = 'chromatic';
   @state() private playing = false;
   @state() private copied = false;
-  @state() private parity = false;
   @state() private vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
+
+  private parity = false;
+
+  private get layout(): 'chromatic' | 'in-key' {
+    return this.keyScale === 'chromatic' ? 'chromatic' : 'in-key';
+  }
 
   private transportTimer: number | null = null;
   private lastSig = '';
@@ -234,6 +239,10 @@ export class CircuitChordForge extends LitElement {
       line-height: 0.92;
       color: #eef0f3;
       display: inline-block;
+    }
+
+    .chord-name-anim {
+      display: inline-block;
       animation: nameIn 460ms cubic-bezier(.2,.75,.25,1) both;
     }
 
@@ -330,7 +339,7 @@ export class CircuitChordForge extends LitElement {
 
     .step-tile {
       flex: 1 1 0;
-      min-width: 140px;
+      min-width: 0;
       padding: 15px 14px 17px;
       border-right: 1px solid #26282e;
       cursor: pointer;
@@ -567,28 +576,6 @@ export class CircuitChordForge extends LitElement {
       flex: 0 0 auto;
     }
 
-    .layout-toggle-pill {
-      padding: 8px 14px;
-      border-radius: 3px;
-      white-space: nowrap;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.68rem;
-      cursor: pointer;
-      user-select: none;
-      transition: background-color 220ms ease, color 220ms ease;
-      background: #1f2329;
-      color: #9aa4af;
-    }
-
-    .layout-toggle-pill.active {
-      background: rgba(92,201,209,0.16);
-      color: #5cc9d1;
-    }
-
-    .layout-toggle-pill:hover {
-      filter: brightness(1.3);
-    }
-
     .octave-stepper {
       display: flex;
       align-items: center;
@@ -751,49 +738,120 @@ export class CircuitChordForge extends LitElement {
       color: #9298a1;
     }
 
-    /* Key & Diatonic Builder */
-    .key-select {
-      width: 100%;
-      margin-bottom: 12px;
-      padding: 9px 10px;
-      background: #1c1f24;
-      color: #c8cad0;
-      border: 1px solid #2e3138;
-      border-radius: 4px;
+    /* Key & Scale Section */
+    .key-scale-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 10px;
+    }
+
+    .key-scale-line {
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.74rem;
-      cursor: pointer;
+      font-size: 0.64rem;
+      color: #6e727a;
+      white-space: nowrap;
     }
 
-    .diatonic-grid {
+    .key-roots-grid {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 3px;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 2px;
+      margin-bottom: 6px;
     }
 
-    .diatonic-tile {
+    .key-root-btn {
       padding: 8px 0;
+      text-align: center;
+      border-radius: 3px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.6rem;
+      cursor: pointer;
+      user-select: none;
+      transition: background 220ms ease, color 220ms ease, box-shadow 220ms ease;
+      background: #1c1f24;
+      color: #8d919a;
+      box-shadow: inset 0 0 0 1px #26282e;
+    }
+
+    .key-root-btn:hover {
+      filter: brightness(1.35);
+    }
+
+    .key-root-btn.active {
+      background: rgba(92, 201, 209, 0.18);
+      color: #5cc9d1;
+      box-shadow: inset 0 0 0 1px rgba(92, 201, 209, 0.5);
+    }
+
+    .scales-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2px;
+    }
+
+    .scale-btn {
+      padding: 8px 10px;
+      border-radius: 3px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.64rem;
+      cursor: pointer;
+      user-select: none;
+      transition: background 220ms ease, color 220ms ease, box-shadow 220ms ease;
+      background: #1c1f24;
+      color: #8d919a;
+      box-shadow: inset 0 0 0 1px #26282e;
+      text-align: left;
+    }
+
+    .scale-btn:hover {
+      filter: brightness(1.35);
+    }
+
+    .scale-btn.active {
+      background: rgba(92, 201, 209, 0.14);
+      color: #5cc9d1;
+      box-shadow: inset 0 0 0 1px rgba(92, 201, 209, 0.45);
+    }
+
+    .diatonic-chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-top: 14px;
+    }
+
+    .diatonic-chip {
+      flex: 1 1 44px;
+      padding: 7px 0;
       text-align: center;
       border-radius: 3px;
       background: #1f2329;
       color: #9aa4af;
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.64rem;
+      font-size: 0.62rem;
       cursor: pointer;
       user-select: none;
       transition: background-color 220ms ease, color 220ms ease;
     }
 
-    .diatonic-tile:hover {
-      background-color: rgba(92,201,209,0.12);
+    .diatonic-chip:hover {
+      background-color: rgba(92, 201, 209, 0.12);
       color: #5cc9d1;
+    }
+
+    .diatonic-chip.active {
+      background: rgba(92, 201, 209, 0.18);
+      color: #5cc9d1;
+      box-shadow: inset 0 0 0 1px rgba(92, 201, 209, 0.45);
     }
 
     .diatonic-hint {
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.64rem;
+      font-size: 0.62rem;
       color: #6e727a;
-      margin-top: 9px;
+      margin-top: 8px;
       margin-bottom: 32px;
     }
 
@@ -934,7 +992,7 @@ export class CircuitChordForge extends LitElement {
         this.active = 0;
         const firstStep = parsedSteps[0];
         this.keyRoot = firstStep.root;
-        this.keyMode = (['min', 'm7', 'm7b5', 'dim'].includes(firstStep.q)) ? 'minor' : 'major';
+        this.keyScale = (['min', 'm7', 'm7b5', 'dim'].includes(firstStep.q)) ? 'natminor' : 'major';
 
         // Optional query param overrides if provided
         if (urlParams.has('key')) {
@@ -947,11 +1005,13 @@ export class CircuitChordForge extends LitElement {
             if (idx >= 0) this.keyRoot = idx;
           }
         }
-        if (urlParams.has('mode')) {
+        if (urlParams.has('scale')) {
+          const scaleParam = urlParams.get('scale')!.toLowerCase();
+          const def = getScaleDefinition(scaleParam);
+          this.keyScale = def.id;
+        } else if (urlParams.has('mode')) {
           const modeParam = urlParams.get('mode')!.toLowerCase();
-          if (modeParam === 'major' || modeParam === 'minor') {
-            this.keyMode = modeParam;
-          }
+          this.keyScale = modeParam === 'minor' ? 'natminor' : 'major';
         }
         if (urlParams.has('octave')) {
           const octParam = parseInt(urlParams.get('octave')!, 10);
@@ -959,11 +1019,8 @@ export class CircuitChordForge extends LitElement {
             this.octave = octParam;
           }
         }
-        if (urlParams.has('layout')) {
-          const layoutParam = urlParams.get('layout')!;
-          if (layoutParam === 'chromatic' || layoutParam === 'in-key') {
-            this.layout = layoutParam;
-          }
+        if (urlParams.has('layout') && urlParams.get('layout') === 'chromatic') {
+          this.keyScale = 'chromatic';
         }
 
         this.persistState();
@@ -986,9 +1043,16 @@ export class CircuitChordForge extends LitElement {
           this.active = Math.max(0, Math.min(parsed.active, this.steps.length - 1));
         }
         if (typeof parsed.keyRoot === 'number') this.keyRoot = parsed.keyRoot;
-        if (parsed.keyMode === 'major' || parsed.keyMode === 'minor') this.keyMode = parsed.keyMode;
+        if (typeof parsed.keyScale === 'string') {
+          this.keyScale = getScaleDefinition(parsed.keyScale).id;
+        } else if (parsed.layout === 'chromatic') {
+          this.keyScale = 'chromatic';
+        } else if (parsed.keyMode === 'minor') {
+          this.keyScale = 'natminor';
+        } else if (parsed.keyMode === 'major') {
+          this.keyScale = 'major';
+        }
         if (typeof parsed.octave === 'number') this.octave = Math.max(1, Math.min(6, parsed.octave));
-        if (parsed.layout === 'chromatic' || parsed.layout === 'in-key') this.layout = parsed.layout;
       }
     } catch {
       // Fall back to defaults on parse failure
@@ -1001,7 +1065,7 @@ export class CircuitChordForge extends LitElement {
         steps: this.steps,
         active: this.active,
         keyRoot: this.keyRoot,
-        keyMode: this.keyMode,
+        keyScale: this.keyScale,
         octave: this.octave,
         layout: this.layout
       };
@@ -1060,11 +1124,17 @@ export class CircuitChordForge extends LitElement {
     this.persistState();
   }
 
+  private setStepChord(root: number, q: string) {
+    this.steps = this.steps.map((st, i) => (i === this.active ? { ...st, root, q } : st));
+    this.persistState();
+  }
+
   private addStep() {
     if (this.steps.length >= 16) return;
     const last = this.steps[this.steps.length - 1] || { root: this.keyRoot, q: 'maj7' };
     this.steps = [...this.steps, { ...last }];
     this.active = this.steps.length - 1;
+    this.auditionActive();
     this.persistState();
   }
 
@@ -1073,6 +1143,7 @@ export class CircuitChordForge extends LitElement {
     const next = this.steps.filter((_, i) => i !== this.active);
     this.steps = next;
     this.active = Math.min(this.active, next.length - 1);
+    this.auditionActive();
     this.persistState();
   }
 
@@ -1088,7 +1159,7 @@ export class CircuitChordForge extends LitElement {
   }
 
   private renderMiniCells(step: ProgressionStep) {
-    const { cells, litMap } = calculateLitPads(step, this.octave, this.layout, this.keyRoot, this.keyMode);
+    const { cells, litMap } = calculateLitPads(step, this.octave, this.layout, this.keyRoot, this.keyScale);
     return cells.map((c, i) => {
       const lit = litMap.get(i);
       let bg = '#242730';
@@ -1096,7 +1167,7 @@ export class CircuitChordForge extends LitElement {
         bg = lit.isRoot ? '#5cc9d1' : '#d1608f';
       } else if (c.midi === null) {
         bg = '#1f2126';
-      } else if (isNoteInKey(c.midi % 12, this.keyRoot, this.keyMode)) {
+      } else if (isNoteInKey(c.midi % 12, this.keyRoot, this.keyScale)) {
         bg = '#2b3038';
       }
       return html`<div class="mini-cell" style="background: ${bg};"></div>`;
@@ -1110,14 +1181,16 @@ export class CircuitChordForge extends LitElement {
       this.octave,
       this.layout,
       this.keyRoot,
-      this.keyMode
+      this.keyScale
     );
 
     const litCount = litMap.size;
     const chordLabel = getChordLabel(currentStep);
+    const scaleDef = getScaleDefinition(this.keyScale);
+    const scaleChords = getScaleChords(this.keyRoot, this.keyScale);
 
     // Track signature change for bloom parity trigger
-    const sig = `${currentStep.root}:${currentStep.q}:${this.octave}:${this.layout}:${this.keyRoot}:${this.keyMode}:${this.active}`;
+    const sig = `${currentStep.root}:${currentStep.q}:${this.octave}:${this.layout}:${this.keyRoot}:${this.keyScale}:${this.active}`;
     if (sig !== this.lastSig) {
       this.lastSig = sig;
       this.parity = !this.parity;
@@ -1148,10 +1221,6 @@ export class CircuitChordForge extends LitElement {
       };
     });
 
-    const scale = this.keyMode === 'major' ? MAJOR_SCALE : MINOR_SCALE;
-    const romans = this.keyMode === 'major' ? ROMAN_MAJ : ROMAN_MIN;
-    const diaQuals = this.keyMode === 'major' ? DIA_MAJ_QUALS : DIA_MIN_QUALS;
-
     return html`
       <div class="container">
         <!-- Top Brand Header -->
@@ -1179,10 +1248,12 @@ export class CircuitChordForge extends LitElement {
             <!-- Chord Title & Actions -->
             <div class="chord-meta-header">
               <div class="meta-line">
-                STEP ${String(this.active + 1).padStart(2, '0')} / ${String(this.steps.length).padStart(2, '0')}  ·  ${NOTE_NAMES[this.keyRoot]} ${this.keyMode.toUpperCase()}  ·  ${this.layout === 'chromatic' ? 'CHROMATIC LAYOUT' : 'IN-KEY LAYOUT'}
+                STEP ${String(this.active + 1).padStart(2, '0')} / ${String(this.steps.length).padStart(2, '0')}  ·  ${NOTE_NAMES[this.keyRoot]} ${scaleDef.label.toUpperCase()}  ·  ${this.layout === 'chromatic' ? 'CHROMATIC LAYOUT' : 'IN-KEY LAYOUT'}
               </div>
               <div class="chord-title-row">
-                <div class="chord-name-title" key="${chordLabel}">${chordLabel}</div>
+                <div class="chord-name-title">
+                  ${keyed(chordLabel, html`<span class="chord-name-anim">${chordLabel}</span>`)}
+                </div>
                 <div class="chord-sub-badge">
                   ${litCount} ${litCount === 1 ? 'pad' : 'pads'} · close voicing
                 </div>
@@ -1331,7 +1402,7 @@ export class CircuitChordForge extends LitElement {
                         weight = '500';
                         anim = `padBloom${animLetter} 560ms cubic-bezier(.2,.75,.25,1) ${70 + dist * 46}ms both`;
                       } else if (!isEmpty) {
-                        const inKey = isNoteInKey(c.midi! % 12, this.keyRoot, this.keyMode);
+                        const inKey = isNoteInKey(c.midi! % 12, this.keyRoot, this.keyScale);
                         bg = inKey
                           ? isNat ? '#2d343e' : '#252b33'
                           : isNat ? '#342a31' : '#2a2329';
@@ -1401,32 +1472,6 @@ export class CircuitChordForge extends LitElement {
                 </span>
               </div>
               <div class="plate-controls-group">
-                <div style="display:flex; gap:4px;">
-                  <div
-                    class="layout-toggle-pill ${this.layout === 'chromatic' ? 'active' : ''}"
-                    tabindex="0"
-                    role="button"
-                    aria-label="Chromatic layout"
-                    @click=${() => {
-                      this.layout = 'chromatic';
-                      this.persistState();
-                    }}
-                  >
-                    chromatic
-                  </div>
-                  <div
-                    class="layout-toggle-pill ${this.layout === 'in-key' ? 'active' : ''}"
-                    tabindex="0"
-                    role="button"
-                    aria-label="In-key layout"
-                    @click=${() => {
-                      this.layout = 'in-key';
-                      this.persistState();
-                    }}
-                  >
-                    in-key
-                  </div>
-                </div>
                 <div class="octave-stepper">
                   <button
                     type="button"
@@ -1564,53 +1609,106 @@ export class CircuitChordForge extends LitElement {
               )}
             </div>
 
-            <!-- Key & Diatonic Builder -->
-            <div class="sidebar-title">KEY</div>
-            <select
-              class="key-select"
-              .value="${this.keyRoot}:${this.keyMode}"
-              @change=${(e: Event) => {
-                const target = e.target as HTMLSelectElement;
-                const [r, m] = target.value.split(':');
-                this.keyRoot = parseInt(r, 10);
-                this.keyMode = m as 'major' | 'minor';
-                this.persistState();
-              }}
-            >
-              ${NOTE_NAMES.map((name, i) => html`
-                <option value="${i}:major" ?selected=${this.keyRoot === i && this.keyMode === 'major'}>
-                  ${name} major
-                </option>
-                <option value="${i}:minor" ?selected=${this.keyRoot === i && this.keyMode === 'minor'}>
-                  ${name} minor
-                </option>
-              `)}
-            </select>
+            <!-- Key & Scale Section -->
+            <div class="key-scale-header">
+              <div class="sidebar-title" style="margin:0;">KEY + SCALE</div>
+              <div class="key-scale-line">
+                ${NOTE_NAMES[this.keyRoot]} ${scaleDef.label}  ·  ${scaleDef.iv.length} notes
+              </div>
+            </div>
 
-            <div class="diatonic-grid">
-              ${romans.map((roman, i) => {
-                const diatonicRoot = (this.keyRoot + scale[i]) % 12;
-                const diatonicQual = diaQuals[i];
+            <!-- 12-Root Grid -->
+            <div class="key-roots-grid">
+              ${NOTE_NAMES.map((name, i) => {
+                const isSelected = this.keyRoot === i;
+                const formattedName = name.replace('#', '♯');
                 return html`
                   <div
-                    class="diatonic-tile"
+                    class="key-root-btn ${isSelected ? 'active' : ''}"
                     tabindex="0"
                     role="button"
-                    aria-label="Add ${roman} chord"
-                    title="add ${NOTE_NAMES[diatonicRoot]}${diatonicQual} to progression"
+                    aria-label="key root ${name}${isSelected ? ', selected' : ''}"
                     @click=${() => {
-                      if (this.steps.length >= 16) return;
-                      this.steps = [...this.steps, { root: diatonicRoot, q: diatonicQual }];
-                      this.active = this.steps.length - 1;
+                      this.keyRoot = i;
                       this.persistState();
                     }}
+                    @keydown=${(e: KeyboardEvent) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        this.keyRoot = i;
+                        this.persistState();
+                      }
+                    }}
                   >
-                    ${roman}
+                    ${formattedName}
                   </div>
                 `;
               })}
             </div>
-            <div class="diatonic-hint">tap a numeral to append it as a step</div>
+
+            <!-- 16 Scales Grid -->
+            <div class="scales-grid">
+              ${SCALES.map(sd => {
+                const isSelected = sd.id === this.keyScale;
+                return html`
+                  <div
+                    class="scale-btn ${isSelected ? 'active' : ''}"
+                    tabindex="0"
+                    role="button"
+                    aria-label="${sd.label} scale${isSelected ? ', selected' : ''}"
+                    @click=${() => {
+                      this.keyScale = sd.id;
+                      this.persistState();
+                    }}
+                    @keydown=${(e: KeyboardEvent) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        this.keyScale = sd.id;
+                        this.persistState();
+                      }
+                    }}
+                  >
+                    ${sd.label}
+                  </div>
+                `;
+              })}
+            </div>
+
+            <!-- Diatonic / Scale Chords Chips -->
+            ${scaleChords.length > 0
+              ? html`
+                  <div class="diatonic-chips-row">
+                    ${scaleChords.map(sc => {
+                      const isCurrentChord = currentStep.root === sc.root && currentStep.q === sc.q;
+                      return html`
+                        <div
+                          class="diatonic-chip ${isCurrentChord ? 'active' : ''}"
+                          tabindex="0"
+                          role="button"
+                          aria-label="Set active chord to ${sc.label} (${sc.roman})"
+                          title="${sc.roman} · ${sc.label}"
+                          @click=${() => {
+                            this.setStepChord(sc.root, sc.q);
+                            const tones = calculateVoicing({ root: sc.root, q: sc.q }, this.octave);
+                            playChord(tones.map(t => t.midi), 0.9);
+                          }}
+                          @keydown=${(e: KeyboardEvent) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              this.setStepChord(sc.root, sc.q);
+                              const tones = calculateVoicing({ root: sc.root, q: sc.q }, this.octave);
+                              playChord(tones.map(t => t.midi), 0.9);
+                            }
+                          }}
+                        >
+                          ${sc.label}
+                        </div>
+                      `;
+                    })}
+                  </div>
+                  <div class="diatonic-hint">chords in this scale — tap to set active chord</div>
+                `
+              : html`<div style="height: 32px;"></div>`}
 
             <!-- Shortcuts -->
             <div class="sidebar-title">SHORTCUTS</div>

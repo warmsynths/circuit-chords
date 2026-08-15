@@ -3,6 +3,9 @@ import {
   NOTE_NAMES,
   QUALS,
   DEGREES,
+  SCALES,
+  getScaleDefinition,
+  getScaleChords,
   getPitchName,
   getChordLabel,
   isNoteInKey,
@@ -27,17 +30,53 @@ describe('pad-plot core library', () => {
     expect(getChordLabel({ root: 0, q: 'maj' })).toBe('C');
   });
 
-  it('determines in-key status for major and minor keys', () => {
+  it('contains exactly 16 Circuit Tracks hardware scales in order', () => {
+    expect(SCALES).toHaveLength(16);
+    expect(SCALES[0].id).toBe('natminor');
+    expect(SCALES[1].id).toBe('major');
+    expect(SCALES[15].id).toBe('chromatic');
+  });
+
+  it('retrieves scale definitions with backward compatibility', () => {
+    expect(getScaleDefinition('major').id).toBe('major');
+    expect(getScaleDefinition('minor').id).toBe('natminor');
+    expect(getScaleDefinition('natminor').id).toBe('natminor');
+    expect(getScaleDefinition('dorian').id).toBe('dorian');
+    expect(getScaleDefinition('unknown').id).toBe('major');
+  });
+
+  it('determines in-key status for various scales', () => {
     // C Major: C D E F G A B
     expect(isNoteInKey(0, 0, 'major')).toBe(true);  // C
     expect(isNoteInKey(4, 0, 'major')).toBe(true);  // E
     expect(isNoteInKey(1, 0, 'major')).toBe(false); // C#
     expect(isNoteInKey(6, 0, 'major')).toBe(false); // F#
 
-    // A Minor: A B C D E F G
-    expect(isNoteInKey(9, 9, 'minor')).toBe(true);  // A
-    expect(isNoteInKey(0, 9, 'minor')).toBe(true);  // C
-    expect(isNoteInKey(1, 9, 'minor')).toBe(false); // C#
+    // A Nat Minor: A B C D E F G
+    expect(isNoteInKey(9, 9, 'natminor')).toBe(true);  // A
+    expect(isNoteInKey(0, 9, 'natminor')).toBe(true);  // C
+    expect(isNoteInKey(1, 9, 'natminor')).toBe(false); // C#
+
+    // C Dorian: C D Eb F G A Bb (intervals: 0, 2, 3, 5, 7, 9, 10)
+    expect(isNoteInKey(3, 0, 'dorian')).toBe(true);  // Eb
+    expect(isNoteInKey(9, 0, 'dorian')).toBe(true);  // A
+    expect(isNoteInKey(4, 0, 'dorian')).toBe(false); // E natural
+  });
+
+  it('calculates dynamic diatonic scale chords', () => {
+    // C Major triads: C (I), Dm (ii), Em (iii), F (IV), G (V), Am (vi), Bdim (vii)
+    const cMajChords = getScaleChords(0, 'major');
+    expect(cMajChords).toHaveLength(7);
+    expect(cMajChords[0]).toEqual({ root: 0, q: 'maj', roman: 'I', label: 'C' });
+    expect(cMajChords[1]).toEqual({ root: 2, q: 'min', roman: 'ii', label: 'Dm' });
+    expect(cMajChords[2]).toEqual({ root: 4, q: 'min', roman: 'iii', label: 'Em' });
+    expect(cMajChords[3]).toEqual({ root: 5, q: 'maj', roman: 'IV', label: 'F' });
+    expect(cMajChords[4]).toEqual({ root: 7, q: 'maj', roman: 'V', label: 'G' });
+    expect(cMajChords[5]).toEqual({ root: 9, q: 'min', roman: 'vi', label: 'Am' });
+    expect(cMajChords[6]).toEqual({ root: 11, q: 'dim', roman: 'vii', label: 'Bdim' });
+
+    // Chromatic returns no diatonic chords
+    expect(getScaleChords(0, 'chromatic')).toHaveLength(0);
   });
 
   it('computes 4-note voicings for seventh chords', () => {
@@ -65,6 +104,19 @@ describe('pad-plot core library', () => {
     // Row 2 Col 2 should be C#3 (midi 49)
     const r2c2 = cells.find(c => c.row === 2 && c.col === 2);
     expect(r2c2?.midi).toBe(49);
+  });
+
+  it('generates 32 grid cells in continuous in-key layout', () => {
+    // In-key C Major (7 notes):
+    // Row 1 (ri=0, bottom): col 1=C3(48), col 2=D3(50), col 3=E3(52), col 4=F3(53), col 5=G3(55), col 6=A3(57), col 7=B3(59), col 8=C4(60)
+    const cells = buildGridCells('in-key', 3, 0, 'major');
+    expect(cells).toHaveLength(32);
+    const r1c1 = cells.find(c => c.row === 1 && c.col === 1);
+    expect(r1c1?.midi).toBe(48);
+    const r1c8 = cells.find(c => c.row === 1 && c.col === 8);
+    expect(r1c8?.midi).toBe(60); // 8th note is C4
+    const r2c1 = cells.find(c => c.row === 2 && c.col === 1);
+    expect(r2c1?.midi).toBe(62); // 9th note (idx=8) is D4
   });
 
   it('maps Cmaj7 chord tones to physical pad coordinates', () => {
