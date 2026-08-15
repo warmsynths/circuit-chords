@@ -42,7 +42,7 @@ describe('pad-plot core library', () => {
     expect(getScaleDefinition('minor').id).toBe('natminor');
     expect(getScaleDefinition('natminor').id).toBe('natminor');
     expect(getScaleDefinition('dorian').id).toBe('dorian');
-    expect(getScaleDefinition('unknown').id).toBe('major');
+    expect(getScaleDefinition('unknown').id).toBe('chromatic');
   });
 
   it('determines in-key status for various scales', () => {

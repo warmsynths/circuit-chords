@@ -48,7 +48,7 @@ export class CircuitChordForge extends LitElement {
   @state() private steps: ProgressionStep[] = DEFAULT_STEPS;
   @state() private active = 0;
   @state() private keyRoot = 0;
-  @state() private keyScale = 'major';
+  @state() private keyScale = 'chromatic';
   @state() private octave = 3;
   @state() private playing = false;
   @state() private copied = false;
@@ -1073,7 +1073,7 @@ export class CircuitChordForge extends LitElement {
         this.active = 0;
         const firstStep = parsedSteps[0];
         this.keyRoot = firstStep.root;
-        this.keyScale = (['min', 'm7', 'm7b5', 'dim'].includes(firstStep.q)) ? 'natminor' : 'major';
+        this.keyScale = 'chromatic';
 
         // Optional query param overrides if provided
         if (urlParams.has('key')) {

@@ -74,7 +74,7 @@ export const SCALES: ScaleDefinition[] = [
 
 export function getScaleDefinition(scaleIdOrMode: string): ScaleDefinition {
   const norm = scaleIdOrMode === 'minor' ? 'natminor' : scaleIdOrMode;
-  return SCALES.find(s => s.id === norm) || SCALES[1]; // default major
+  return SCALES.find(s => s.id === norm) || SCALES[15]; // default chromatic
 }
 
 export interface ScaleChord {
