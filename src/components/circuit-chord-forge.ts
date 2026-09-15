@@ -15,6 +15,7 @@ import {
   buildGridCells,
   calculateLitPads,
   type ProgressionStep,
+  type StepVoicing,
   type GridCell,
   type PadLitInfo,
   type VoicedTone,
@@ -22,7 +23,7 @@ import {
   type ScaleChord
 } from '../lib/pad-plot';
 import { playChord, playNote } from '../lib/audio';
-import { parseProgressionToSteps } from '../lib/chord-parser';
+import { parseProgressionToSteps, parseVoicingsParam } from '../lib/chord-parser';
 
 const STORAGE_KEY = 'circuit_chords_v2_state';
 
@@ -714,6 +715,37 @@ export class CircuitChordForge extends LitElement {
       filter: brightness(1.3);
     }
 
+    /* Voicing Grid */
+    .voicing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      margin-bottom: 32px;
+    }
+
+    .voicing-tile {
+      padding: 9px 0;
+      text-align: center;
+      border-radius: 3px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.68rem;
+      cursor: pointer;
+      user-select: none;
+      background: #21252b;
+      color: #a0a9b3;
+      transition: background 240ms ease, color 240ms ease, box-shadow 240ms ease;
+    }
+
+    .voicing-tile.active {
+      background: rgba(92, 201, 209, 0.18);
+      color: #5cc9d1;
+      box-shadow: inset 0 0 0 1px rgba(92, 201, 209, 0.5);
+    }
+
+    .voicing-tile:hover {
+      filter: brightness(1.3);
+    }
+
     /* Tone Breakdown Table */
     .tones-table {
       display: flex;
@@ -1065,9 +1097,11 @@ export class CircuitChordForge extends LitElement {
     }
     const urlParams = new URLSearchParams(search);
     const progressionQuery = urlParams.get('p') || urlParams.get('progression');
+    const voicingsQuery = urlParams.get('v') || urlParams.get('voicings') || urlParams.get('voicing');
 
     if (progressionQuery && progressionQuery.trim()) {
-      const parsedSteps = parseProgressionToSteps(progressionQuery.trim());
+      const voicings = parseVoicingsParam(voicingsQuery);
+      const parsedSteps = parseProgressionToSteps(progressionQuery.trim(), voicings);
       if (parsedSteps.length > 0) {
         this.steps = parsedSteps;
         this.active = 0;
@@ -1205,6 +1239,12 @@ export class CircuitChordForge extends LitElement {
     this.persistState();
   }
 
+  private setStepVoicing(voicing: StepVoicing) {
+    this.steps = this.steps.map((st, i) => (i === this.active ? { ...st, voicing } : st));
+    this.auditionActive();
+    this.persistState();
+  }
+
   private setStepChord(root: number, q: string) {
     this.steps = this.steps.map((st, i) => (i === this.active ? { ...st, root, q } : st));
     this.persistState();
@@ -1228,8 +1268,9 @@ export class CircuitChordForge extends LitElement {
     this.persistState();
   }
 
-  private copyPadList(chordLabel: string, pairs: { pitch: string; ref: string }[]) {
-    const text = `${chordLabel} — ${pairs.map(p => `${p.pitch}→${p.ref}`).join('  ')}`;
+  private copyPadList(chordLabel: string, pairs: { pitch: string; ref: string }[], voicing?: StepVoicing) {
+    const vTag = voicing === '1st' ? ' [1st inv]' : (voicing === 'octave' ? ' [oct up]' : '');
+    const text = `${chordLabel}${vTag} — ${pairs.map(p => `${p.pitch}→${p.ref}`).join('  ')}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text).catch(() => {});
     }
@@ -1336,7 +1377,7 @@ export class CircuitChordForge extends LitElement {
                   ${keyed(chordLabel, html`<span class="chord-name-anim">${chordLabel}</span>`)}
                 </div>
                 <div class="chord-sub-badge">
-                  ${litCount} ${litCount === 1 ? 'pad' : 'pads'} · close voicing
+                  ${litCount} ${litCount === 1 ? 'pad' : 'pads'} · ${currentStep.voicing === '1st' ? '1st inversion' : (currentStep.voicing === 'octave' ? 'octave up' : 'root position')}
                 </div>
               </div>
               <div class="action-toolbar">
@@ -1359,7 +1400,7 @@ export class CircuitChordForge extends LitElement {
                 <button
                   type="button"
                   class="tool-btn"
-                  @click=${() => this.copyPadList(chordLabel, pairs)}
+                  @click=${() => this.copyPadList(chordLabel, pairs, currentStep.voicing)}
                 >
                   ${this.copied ? 'copied' : 'copy pad list'}
                 </button>
@@ -1658,7 +1699,7 @@ export class CircuitChordForge extends LitElement {
               )}
             </div>
 
-            <!-- 12 Chord Qualities -->
+            <!-- Chord Qualities -->
             <div class="quality-grid">
               ${QUALS.map(
                 q => html`
@@ -1670,6 +1711,28 @@ export class CircuitChordForge extends LitElement {
                     @click=${() => this.setStepQuality(q.id)}
                   >
                     ${q.label}
+                  </div>
+                `
+              )}
+            </div>
+
+            <!-- Voicing Selector -->
+            <div class="sidebar-title">VOICING</div>
+            <div class="voicing-grid">
+              ${([
+                { id: 'root' as const, label: 'Root' },
+                { id: '1st' as const, label: '1st Inv' },
+                { id: 'octave' as const, label: 'Oct Up' }
+              ]).map(
+                v => html`
+                  <div
+                    class="voicing-tile ${(currentStep.voicing || 'root') === v.id ? 'active' : ''}"
+                    tabindex="0"
+                    role="button"
+                    aria-label="${v.label} voicing"
+                    @click=${() => this.setStepVoicing(v.id)}
+                  >
+                    ${v.label}
                   </div>
                 `
               )}

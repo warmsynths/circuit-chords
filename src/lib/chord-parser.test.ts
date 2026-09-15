@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitize, tokenize, normalizeQuality, parseProgression, parseProgressionToSteps, parsedChordToStep } from './chord-parser';
+import { sanitize, tokenize, normalizeQuality, parseProgression, parseProgressionToSteps, parsedChordToStep, parseVoicingsParam } from './chord-parser';
 
 // ─── sanitize ─────────────────────────────────────────────────────────────────
 
@@ -408,9 +408,9 @@ describe('parseProgressionToSteps', () => {
   it('maps extended chords and special chord qualities to valid QUALS', () => {
     const steps = parseProgressionToSteps('Dm9 G13 Cmaj9 Bm7b5 Bdim Caug Csus2 Csus4 C6 Cadd9');
     expect(steps).toEqual([
-      { root: 2, q: 'm7' },
-      { root: 7, q: '7' },
-      { root: 0, q: 'maj7' },
+      { root: 2, q: 'm9' },
+      { root: 7, q: '9' },
+      { root: 0, q: 'maj9' },
       { root: 11, q: 'm7b5' },
       { root: 11, q: 'dim' },
       { root: 0, q: 'aug' },
@@ -440,6 +440,35 @@ describe('parseProgressionToSteps', () => {
     ]);
   });
 
+  it('attaches parsed voicings to steps', () => {
+    const voicings = parseVoicingsParam('1st,octave,root');
+    const steps = parseProgressionToSteps('Cmaj9 Am7 Dm7', voicings);
+    expect(steps).toEqual([
+      { root: 0, q: 'maj9', voicing: '1st' },
+      { root: 9, q: 'm7', voicing: 'octave' },
+      { root: 2, q: 'm7', voicing: 'root' }
+    ]);
+  });
+
+  it('parses various voicing query parameter formats', () => {
+    expect(parseVoicingsParam('root+1st+octave')).toEqual(['root', '1st', 'octave']);
+    expect(parseVoicingsParam('0,1,2')).toEqual(['root', '1st', 'octave']);
+    expect(parseVoicingsParam('inv1 oct up root')).toEqual(['1st', 'octave', 'octave', 'root']);
+    expect(parseVoicingsParam('')).toEqual([]);
+    expect(parseVoicingsParam(null)).toEqual([]);
+  });
+
+  it('parses progressions with Ddim9 and voicings correctly', () => {
+    const voicings = parseVoicingsParam('1st+1st+root+octave');
+    const steps = parseProgressionToSteps('Ebmaj7 Bbmaj9 Ddim9 Bb6', voicings);
+    expect(steps).toEqual([
+      { root: 3, q: 'maj7', voicing: '1st' },
+      { root: 10, q: 'maj9', voicing: '1st' },
+      { root: 2, q: 'dim', voicing: 'root' },
+      { root: 10, q: '6', voicing: 'octave' }
+    ]);
+  });
+
   it('caps output at 16 steps max', () => {
     const chords20 = Array(20).fill('Cmaj7').join(' ');
     const steps = parseProgressionToSteps(chords20);
@@ -451,4 +480,6 @@ describe('parseProgressionToSteps', () => {
     expect(parseProgressionToSteps('')).toEqual([]);
   });
 });
+
+
 

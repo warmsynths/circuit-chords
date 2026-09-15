@@ -1,5 +1,5 @@
 import { Chord, Note } from 'tonal';
-import type { ProgressionStep } from './pad-plot';
+import type { ProgressionStep, StepVoicing } from './pad-plot';
 
 /**
  * Normalized musical metadata extracted from a chord symbol.
@@ -49,6 +49,8 @@ export function normalizeQuality(quality: string): string {
   // Specific minor-major overrides (must happen after general maj/min normalization)
   q = q.replace(/minmaj/gi, 'mMaj');
   q = q.replace(/mmaj/gi, 'mMaj');
+  q = q.replace(/m\(maj7\)/gi, 'mMaj7');
+  q = q.replace(/m\(M7\)/gi, 'mMaj7');
 
   return q;
 }
@@ -114,6 +116,22 @@ export function parseProgression(source: string): ParsedChord[] {
       }
     }
 
+    // Fallback: If still unrecognized by Tonal (e.g. Ddim9, Csus6), fallback to base quality
+    if (chord.empty || chord.notes.length === 0) {
+      const [root, quality] = Chord.tokenize(symbol);
+      if (root && !Note.get(root).empty) {
+        const baseSuffix = quality.replace(/\d+$/, '');
+        const baseChord = baseSuffix ? Chord.get(root + normalizeQuality(baseSuffix)) : Chord.get(root);
+        if (!baseChord.empty && baseChord.notes.length > 0) {
+          chord = {
+            ...baseChord,
+            symbol,
+            tonic: root
+          };
+        }
+      }
+    }
+
     if (chord.empty || chord.notes.length === 0) {
       continue;
     }
@@ -165,21 +183,30 @@ export function parsedChordToStep(chord: ParsedChord): ProgressionStep {
     q = 'add9';
   } else if (/^(?:6|add6|maj6)$/i.test(suffix)) {
     q = '6';
+  } else if (/^(?:m9|min9|-9|m11|min11|m13|min13)$/i.test(suffix) || (quality === 'minor' && (chord.intervals?.includes('14M') || /m9|min9/i.test(suffix)))) {
+    q = 'm9';
   } else if (
-    /maj7|maj9|maj11|maj13|Δ|ma7/i.test(suffix) ||
-    suffix.includes('M7') ||
+    /maj9|maj11|maj13|Δ9|ma9/i.test(suffix) ||
     suffix.includes('M9') ||
     suffix.includes('M11') ||
     suffix.includes('M13') ||
+    (quality === 'major' && chord.intervals?.includes('14M') && chord.intervals?.includes('11M'))
+  ) {
+    q = 'maj9';
+  } else if (/^(?:9|11|13|dom9|dom11|dom13|9b5|9#5)$/i.test(suffix) || (quality === 'major' && chord.intervals?.includes('14M') && chord.intervals?.includes('10m'))) {
+    q = '9';
+  } else if (
+    /maj7|Δ|ma7/i.test(suffix) ||
+    suffix.includes('M7') ||
     (quality === 'major' && (chord.aliases?.some(a => /maj7|M7|Δ/i.test(a)) ?? false))
   ) {
     q = 'maj7';
   } else if (
-    /^(?:m7|min7|-7|m9|min9|-9|m11|min11|m13|min13|m6|min6)$/i.test(suffix) ||
-    (quality === 'minor' && (chord.intervals?.includes('10m') || chord.intervals?.includes('10d') || /7|9|11|13/.test(suffix)))
+    /^(?:m7|min7|-7|m6|min6)$/i.test(suffix) ||
+    (quality === 'minor' && (chord.intervals?.includes('10m') || chord.intervals?.includes('10d') || /7/.test(suffix)))
   ) {
     q = 'm7';
-  } else if (/^(?:7|9|11|13|dom|dom7|7b9|7#9|7b5|7#5|7alt)$/i.test(suffix) || (quality === 'major' && /7|9|11|13/.test(suffix))) {
+  } else if (/^(?:7|dom|dom7|7b9|7#9|7b5|7#5|7alt)$/i.test(suffix) || (quality === 'major' && /7/.test(suffix))) {
     q = '7';
   } else if (quality === 'minor' || /^(?:m|min|-)$/i.test(suffix)) {
     q = 'min';
@@ -195,10 +222,37 @@ export function parsedChordToStep(chord: ParsedChord): ProgressionStep {
  * (capped at 16 steps for Circuit Tracks hardware compatibility).
  *
  * @param source Freeform progression text (e.g. from query string "Cmaj7 Am7 Dm7 G7").
+ * @param voicings Optional array of StepVoicing to attach to each step.
  * @returns Array of ProgressionStep objects.
  */
-export function parseProgressionToSteps(source: string): ProgressionStep[] {
+export function parseProgressionToSteps(source: string, voicings?: StepVoicing[]): ProgressionStep[] {
   const parsed = parseProgression(source);
-  return parsed.map(parsedChordToStep).slice(0, 16);
+  const steps = parsed.map(parsedChordToStep).slice(0, 16);
+  if (voicings && voicings.length > 0) {
+    steps.forEach((st, i) => {
+      if (voicings[i]) {
+        st.voicing = voicings[i];
+      }
+    });
+  }
+  return steps;
 }
+
+/**
+ * Parses a comma-, space-, or plus-separated voicings query parameter string.
+ * Tokens containing 'oct', 'up', or '2' -> 'octave'.
+ * Tokens containing '1', 'inv' -> '1st'.
+ * All others -> 'root'.
+ */
+export function parseVoicingsParam(raw?: string | null): StepVoicing[] {
+  if (!raw || !raw.trim()) return [];
+  const tokens = raw.trim().split(/[\s,++]+/);
+  return tokens.map((token): StepVoicing => {
+    const t = token.toLowerCase();
+    if (t.includes('oct') || t.includes('up') || t === '2') return 'octave';
+    if (t.includes('1') || t.includes('inv') || t === '1st') return '1st';
+    return 'root';
+  });
+}
+
 

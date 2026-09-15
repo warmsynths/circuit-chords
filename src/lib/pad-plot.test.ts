@@ -137,4 +137,46 @@ describe('pad-plot core library', () => {
     const result = calculateLitPads({ root: 11, q: 'add9' }, 6, 'chromatic', 0, 'major');
     expect(result.missingTones.length).toBeGreaterThan(0);
   });
+
+  it('computes 5-note voicings for 9th chord qualities', () => {
+    const maj9Tones = calculateVoicing({ root: 0, q: 'maj9' }, 3);
+    // C3 (48), E3 (52), G3 (55), B3 (59), D4 (62)
+    expect(maj9Tones).toHaveLength(5);
+    expect(maj9Tones.map(t => t.midi)).toEqual([48, 52, 55, 59, 62]);
+
+    const m9Tones = calculateVoicing({ root: 0, q: 'm9' }, 3);
+    // C3 (48), Eb3 (51), G3 (55), Bb3 (58), D4 (62)
+    expect(m9Tones).toHaveLength(5);
+    expect(m9Tones.map(t => t.midi)).toEqual([48, 51, 55, 58, 62]);
+
+    const dom9Tones = calculateVoicing({ root: 0, q: '9' }, 3);
+    // C3 (48), E3 (52), G3 (55), Bb3 (58), D4 (62)
+    expect(dom9Tones).toHaveLength(5);
+    expect(dom9Tones.map(t => t.midi)).toEqual([48, 52, 55, 58, 62]);
+  });
+
+  it('applies 1st inversion and octave up voicings', () => {
+    // Cmaj7 root position: C3(48), E3(52), G3(55), B3(59)
+    const rootTones = calculateVoicing({ root: 0, q: 'maj7', voicing: 'root' }, 3);
+    expect(rootTones.map(t => t.midi)).toEqual([48, 52, 55, 59]);
+    expect(rootTones[0].isRoot).toBe(true);
+
+    // Cmaj7 1st inversion: E3(52), G3(55), B3(59), C4(60)
+    const invTones = calculateVoicing({ root: 0, q: 'maj7', voicing: '1st' }, 3);
+    expect(invTones.map(t => t.midi)).toEqual([52, 55, 59, 60]);
+    const rootTone = invTones.find(t => t.isRoot);
+    expect(rootTone?.midi).toBe(60); // C4 is now the root note on top
+
+    // Cmaj7 octave up: C4(60), E4(64), G4(67), B4(71)
+    const octTones = calculateVoicing({ root: 0, q: 'maj7', voicing: 'octave' }, 3);
+    expect(octTones.map(t => t.midi)).toEqual([60, 64, 67, 71]);
+  });
+
+  it('formats chord labels with optional voicing tags', () => {
+    expect(getChordLabel({ root: 0, q: 'maj7', voicing: '1st' }, true)).toBe('Cmaj7 [1st inv]');
+    expect(getChordLabel({ root: 9, q: 'm7', voicing: 'octave' }, true)).toBe('Am7 [oct up]');
+    expect(getChordLabel({ root: 2, q: 'm9', voicing: 'root' }, true)).toBe('Dm9');
+    expect(getChordLabel({ root: 0, q: 'maj7', voicing: '1st' }, false)).toBe('Cmaj7');
+  });
 });
+

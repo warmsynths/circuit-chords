@@ -13,6 +13,9 @@ export const QUALS: ChordQuality[] = [
   { id: 'maj7', label: 'maj7', iv: [0, 4, 7, 11] },
   { id: 'm7',   label: 'm7',   iv: [0, 3, 7, 10] },
   { id: '7',    label: '7',    iv: [0, 4, 7, 10] },
+  { id: '9',    label: '9',    iv: [0, 4, 7, 10, 14] },
+  { id: 'maj9', label: 'maj9', iv: [0, 4, 7, 11, 14] },
+  { id: 'm9',   label: 'm9',   iv: [0, 3, 7, 10, 14] },
   { id: 'm7b5', label: 'm7♭5', iv: [0, 3, 6, 10] },
   { id: 'dim',  label: 'dim',  iv: [0, 3, 6] },
   { id: 'aug',  label: 'aug',  iv: [0, 4, 8] },
@@ -129,9 +132,12 @@ export function getScaleChords(keyRoot: number, keyScale: string): ScaleChord[] 
 export const NAT = [0, 2, 4, 5, 7, 9, 11, 12];
 export const ACC = [null, 1, 3, null, 6, 8, 10, null];
 
+export type StepVoicing = 'root' | '1st' | 'octave';
+
 export interface ProgressionStep {
   root: number; // 0..11
   q: string;    // 'maj', 'm7', etc.
+  voicing?: StepVoicing;
 }
 
 export interface VoicedTone {
@@ -165,11 +171,16 @@ export function getChordQuality(id: string): ChordQuality {
   return QUALS.find(q => q.id === id) || QUALS[0];
 }
 
-export function getChordLabel(step: ProgressionStep): string {
+export function getChordLabel(step: ProgressionStep, includeVoicing = false): string {
   const rootName = NOTE_NAMES[step.root];
   const q = getChordQuality(step.q);
   const qSuffix = step.q === 'maj' ? '' : step.q === 'min' ? 'm' : q.label;
-  return `${rootName}${qSuffix}`;
+  const base = `${rootName}${qSuffix}`;
+  if (!includeVoicing || !step.voicing || step.voicing === 'root') {
+    return base;
+  }
+  const vTag = step.voicing === '1st' ? '1st inv' : 'oct up';
+  return `${base} [${vTag}]`;
 }
 
 export function isNoteInKey(pitchClass: number, keyRoot: number, keyScale: string): boolean {
@@ -180,12 +191,24 @@ export function isNoteInKey(pitchClass: number, keyRoot: number, keyScale: strin
 export function calculateVoicing(step: ProgressionStep, octave: number): VoicedTone[] {
   const qual = getChordQuality(step.q);
   const baseMidi = midiFromOctaveAndSemi(octave, step.root);
-  return qual.iv.map((interval, index) => ({
+  const tones = qual.iv.map((interval, index) => ({
     midi: baseMidi + interval,
     iv: interval,
     isRoot: index === 0,
     order: index
   }));
+
+  const voicing = step.voicing || 'root';
+  if (voicing === 'octave') {
+    return tones.map(t => ({ ...t, midi: t.midi + 12 }));
+  }
+  if (voicing === '1st' && tones.length > 1) {
+    const [lowest, ...rest] = tones;
+    const invertedLowest = { ...lowest, midi: lowest.midi + 12 };
+    const all = [...rest, invertedLowest];
+    return all.sort((a, b) => a.midi - b.midi);
+  }
+  return tones;
 }
 
 /**
