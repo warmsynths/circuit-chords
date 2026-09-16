@@ -382,61 +382,61 @@ describe('parseProgressionToSteps', () => {
   it('parses standard 4-chord progression into ProgressionStep array', () => {
     const steps = parseProgressionToSteps('Cmaj7 Am7 Dm7 G7');
     expect(steps).toEqual([
-      { root: 0, q: 'maj7' },
-      { root: 9, q: 'm7' },
-      { root: 2, q: 'm7' },
-      { root: 7, q: '7' }
+      { root: 0, q: 'maj7', originalSymbol: 'Cmaj7' },
+      { root: 9, q: 'm7', originalSymbol: 'Am7' },
+      { root: 2, q: 'm7', originalSymbol: 'Dm7' },
+      { root: 7, q: '7', originalSymbol: 'G7' }
     ]);
   });
 
   it('handles sharp and flat root accidentals correctly', () => {
     const steps = parseProgressionToSteps('F#m7 B7 Emaj7');
     expect(steps).toEqual([
-      { root: 6, q: 'm7' },
-      { root: 11, q: '7' },
-      { root: 4, q: 'maj7' }
+      { root: 6, q: 'm7', originalSymbol: 'F#m7' },
+      { root: 11, q: '7', originalSymbol: 'B7' },
+      { root: 4, q: 'maj7', originalSymbol: 'Emaj7' }
     ]);
 
     const flatSteps = parseProgressionToSteps('Bbm7 Eb7 Abmaj7');
     expect(flatSteps).toEqual([
-      { root: 10, q: 'm7' },
-      { root: 3, q: '7' },
-      { root: 8, q: 'maj7' }
+      { root: 10, q: 'm7', originalSymbol: 'Bbm7' },
+      { root: 3, q: '7', originalSymbol: 'Eb7' },
+      { root: 8, q: 'maj7', originalSymbol: 'Abmaj7' }
     ]);
   });
 
   it('maps extended chords and special chord qualities to valid QUALS', () => {
     const steps = parseProgressionToSteps('Dm9 G13 Cmaj9 Bm7b5 Bdim Caug Csus2 Csus4 C6 Cadd9');
     expect(steps).toEqual([
-      { root: 2, q: 'm9' },
-      { root: 7, q: '9' },
-      { root: 0, q: 'maj9' },
-      { root: 11, q: 'm7b5' },
-      { root: 11, q: 'dim' },
-      { root: 0, q: 'aug' },
-      { root: 0, q: 'sus2' },
-      { root: 0, q: 'sus4' },
-      { root: 0, q: '6' },
-      { root: 0, q: 'add9' }
+      { root: 2, q: 'm9', originalSymbol: 'Dm9' },
+      { root: 7, q: '9', originalSymbol: 'G13' },
+      { root: 0, q: 'maj9', originalSymbol: 'Cmaj9' },
+      { root: 11, q: 'm7b5', originalSymbol: 'Bm7b5' },
+      { root: 11, q: 'dim', originalSymbol: 'Bdim' },
+      { root: 0, q: 'aug', originalSymbol: 'Caug' },
+      { root: 0, q: 'sus2', originalSymbol: 'Csus2' },
+      { root: 0, q: 'sus4', originalSymbol: 'Csus4' },
+      { root: 0, q: '6', originalSymbol: 'C6' },
+      { root: 0, q: 'add9', originalSymbol: 'Cadd9' }
     ]);
   });
 
   it('handles triads (major and minor)', () => {
     const steps = parseProgressionToSteps('C Am F G');
     expect(steps).toEqual([
-      { root: 0, q: 'maj' },
-      { root: 9, q: 'min' },
-      { root: 5, q: 'maj' },
-      { root: 7, q: 'maj' }
+      { root: 0, q: 'maj', originalSymbol: 'C' },
+      { root: 9, q: 'min', originalSymbol: 'Am' },
+      { root: 5, q: 'maj', originalSymbol: 'F' },
+      { root: 7, q: 'maj', originalSymbol: 'G' }
     ]);
   });
 
   it('handles dashed / bar-separated query progression strings', () => {
     const steps = parseProgressionToSteps('Dm7 - G7 - Cmaj7');
     expect(steps).toEqual([
-      { root: 2, q: 'm7' },
-      { root: 7, q: '7' },
-      { root: 0, q: 'maj7' }
+      { root: 2, q: 'm7', originalSymbol: 'Dm7' },
+      { root: 7, q: '7', originalSymbol: 'G7' },
+      { root: 0, q: 'maj7', originalSymbol: 'Cmaj7' }
     ]);
   });
 
@@ -444,9 +444,9 @@ describe('parseProgressionToSteps', () => {
     const voicings = parseVoicingsParam('1st,octave,root');
     const steps = parseProgressionToSteps('Cmaj9 Am7 Dm7', voicings);
     expect(steps).toEqual([
-      { root: 0, q: 'maj9', voicing: '1st' },
-      { root: 9, q: 'm7', voicing: 'octave' },
-      { root: 2, q: 'm7', voicing: 'root' }
+      { root: 0, q: 'maj9', voicing: '1st', originalSymbol: 'Cmaj9' },
+      { root: 9, q: 'm7', voicing: 'octave', originalSymbol: 'Am7' },
+      { root: 2, q: 'm7', voicing: 'root', originalSymbol: 'Dm7' }
     ]);
   });
 
@@ -462,10 +462,10 @@ describe('parseProgressionToSteps', () => {
     const voicings = parseVoicingsParam('1st+1st+root+octave');
     const steps = parseProgressionToSteps('Ebmaj7 Bbmaj9 Ddim9 Bb6', voicings);
     expect(steps).toEqual([
-      { root: 3, q: 'maj7', voicing: '1st' },
-      { root: 10, q: 'maj9', voicing: '1st' },
-      { root: 2, q: 'dim', voicing: 'root' },
-      { root: 10, q: '6', voicing: 'octave' }
+      { root: 3, q: 'maj7', voicing: '1st', originalSymbol: 'Ebmaj7' },
+      { root: 10, q: 'maj9', voicing: '1st', originalSymbol: 'Bbmaj9' },
+      { root: 2, q: 'dim', voicing: 'root', originalSymbol: 'Ddim9' },
+      { root: 10, q: '6', voicing: 'octave', originalSymbol: 'Bb6' }
     ]);
   });
 

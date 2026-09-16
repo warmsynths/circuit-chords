@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   NOTE_NAMES,
+  NOTE_NAMES_FLAT,
   QUALS,
   DEGREES,
   SCALES,
@@ -11,7 +12,10 @@ import {
   isNoteInKey,
   calculateVoicing,
   buildGridCells,
-  calculateLitPads
+  calculateLitPads,
+  preferFlatSpelling,
+  formatRootName,
+  parseKeyParam
 } from './pad-plot';
 
 describe('pad-plot core library', () => {
@@ -177,6 +181,101 @@ describe('pad-plot core library', () => {
     expect(getChordLabel({ root: 9, q: 'm7', voicing: 'octave' }, true)).toBe('Am7 [oct up]');
     expect(getChordLabel({ root: 2, q: 'm9', voicing: 'root' }, true)).toBe('Dm9');
     expect(getChordLabel({ root: 0, q: 'maj7', voicing: '1st' }, false)).toBe('Cmaj7');
+  });
+
+  describe('enharmonic and key-aware spelling', () => {
+    it('correctly determines flat preference for major keys', () => {
+      expect(preferFlatSpelling('Db', 'major')).toBe(true);
+      expect(preferFlatSpelling('Eb', 'major')).toBe(true);
+      expect(preferFlatSpelling('F', 'major')).toBe(true);
+      expect(preferFlatSpelling('Ab', 'major')).toBe(true);
+      expect(preferFlatSpelling('Bb', 'major')).toBe(true);
+
+      expect(preferFlatSpelling('C', 'major')).toBe(false);
+      expect(preferFlatSpelling('G', 'major')).toBe(false);
+      expect(preferFlatSpelling('D', 'major')).toBe(false);
+      expect(preferFlatSpelling('A', 'major')).toBe(false);
+      expect(preferFlatSpelling('E', 'major')).toBe(false);
+      expect(preferFlatSpelling('B', 'major')).toBe(false);
+      expect(preferFlatSpelling('F#', 'major')).toBe(false);
+    });
+
+    it('correctly determines flat preference for minor keys', () => {
+      // Relative major of C minor is Eb major (3 flats)
+      expect(preferFlatSpelling('C', 'natminor')).toBe(true);
+      // Relative major of D minor is F major (1 flat)
+      expect(preferFlatSpelling('D', 'natminor')).toBe(true);
+      // Relative major of G minor is Bb major (2 flats)
+      expect(preferFlatSpelling('G', 'natminor')).toBe(true);
+      // Relative major of Bb minor is Db major (5 flats)
+      expect(preferFlatSpelling('Bb', 'natminor')).toBe(true);
+      // C# minor is standard 4 sharps
+      expect(preferFlatSpelling('C#', 'natminor')).toBe(false);
+      // A minor has 0 flats
+      expect(preferFlatSpelling('A', 'natminor')).toBe(false);
+    });
+
+    it('formats pitch names in flat keys', () => {
+      expect(getPitchName(61, true)).toBe('Db4');
+      expect(getPitchName(66, true)).toBe('Gb4');
+      expect(getPitchName(70, true)).toBe('Bb4');
+      expect(getPitchName(61, false)).toBe('C#4');
+      expect(getPitchName(66, false)).toBe('F#4');
+    });
+
+    it('formats chord labels as Gb instead of F# when preferFlat is true', () => {
+      expect(getChordLabel({ root: 6, q: 'maj' }, false, true)).toBe('Gb');
+      expect(getChordLabel({ root: 6, q: 'maj' }, false, false)).toBe('F#');
+      expect(getChordLabel({ root: 1, q: 'maj' }, false, true)).toBe('Db');
+      expect(getChordLabel({ root: 3, q: 'min' }, false, true)).toBe('Ebm');
+      expect(getChordLabel({ root: 8, q: 'maj' }, false, true)).toBe('Ab');
+    });
+
+    it('preserves originalSymbol on progression steps', () => {
+      expect(getChordLabel({ root: 6, q: 'maj', originalSymbol: 'Gb' }, false, false)).toBe('Gb');
+      expect(getChordLabel({ root: 6, q: 'maj', originalSymbol: 'Gb', voicing: '1st' }, true, false)).toBe('Gb [1st inv]');
+    });
+
+    it('generates diatonic triads in Db major with Gb as the IV chord', () => {
+      const dbTriads = getScaleChords(1, 'major', true);
+      const labels = dbTriads.map(t => t.label);
+      expect(labels).toEqual(['Db', 'Ebm', 'Fm', 'Gb', 'Ab', 'Bbm', 'Cdim']);
+      expect(dbTriads[3].label).toBe('Gb');
+      expect(dbTriads[3].roman).toBe('IV');
+    });
+
+    it('parses key query parameter correctly', () => {
+      expect(parseKeyParam('Db')).toEqual({ keyRoot: 1, keyRootName: 'Db', preferFlat: true });
+      expect(parseKeyParam('C#')).toEqual({ keyRoot: 1, keyRootName: 'C#', preferFlat: false });
+      expect(parseKeyParam('F')).toEqual({ keyRoot: 5, keyRootName: 'F', preferFlat: true });
+      expect(parseKeyParam('D#')).toEqual({ keyRoot: 3, keyRootName: 'D#', preferFlat: false });
+      expect(parseKeyParam('Eb')).toEqual({ keyRoot: 3, keyRootName: 'Eb', preferFlat: true });
+      expect(parseKeyParam('invalid')).toBeNull();
+    });
+
+    it('accurately renders user progression in Db major with Gb [1st inv]', () => {
+      const userSteps = [
+        { root: 6, q: 'maj', voicing: '1st' as const },
+        { root: 1, q: 'maj' },
+        { root: 3, q: 'min' },
+        { root: 8, q: 'maj' },
+        { root: 0, q: 'dim' },
+        { root: 10, q: 'min' },
+        { root: 5, q: 'min' },
+        { root: 8, q: 'maj' }
+      ];
+      const rendered = userSteps.map(s => getChordLabel(s, true, true));
+      expect(rendered).toEqual([
+        'Gb [1st inv]',
+        'Db',
+        'Ebm',
+        'Ab',
+        'Cdim',
+        'Bbm',
+        'Fm',
+        'Ab'
+      ]);
+    });
   });
 });
 

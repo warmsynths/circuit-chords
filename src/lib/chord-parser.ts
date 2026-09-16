@@ -214,7 +214,7 @@ export function parsedChordToStep(chord: ParsedChord): ProgressionStep {
     q = 'maj';
   }
 
-  return { root, q };
+  return { root, q, originalSymbol: chord.symbol || undefined };
 }
 
 /**

@@ -3,6 +3,7 @@ import { customElement, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import {
   NOTE_NAMES,
+  NOTE_NAMES_FLAT,
   QUALS,
   DEGREES,
   SCALES,
@@ -14,6 +15,9 @@ import {
   calculateVoicing,
   buildGridCells,
   calculateLitPads,
+  preferFlatSpelling,
+  formatRootName,
+  parseKeyParam,
   type ProgressionStep,
   type StepVoicing,
   type GridCell,
@@ -31,6 +35,7 @@ interface SavedState {
   steps: ProgressionStep[];
   active: number;
   keyRoot: number;
+  keyRootName?: string;
   keyScale?: string;
   keyMode?: 'major' | 'minor';
   octave: number;
@@ -49,6 +54,7 @@ export class CircuitChordForge extends LitElement {
   @state() private steps: ProgressionStep[] = DEFAULT_STEPS;
   @state() private active = 0;
   @state() private keyRoot = 0;
+  @state() private keyRootName = 'C';
   @state() private keyScale = 'chromatic';
   @state() private octave = 3;
   @state() private playing = false;
@@ -59,6 +65,15 @@ export class CircuitChordForge extends LitElement {
 
   private get layout(): 'chromatic' | 'in-key' {
     return this.keyScale === 'chromatic' ? 'chromatic' : 'in-key';
+  }
+
+  private get preferFlat(): boolean {
+    return preferFlatSpelling(this.keyRootName || this.keyRoot, this.keyScale);
+  }
+
+  private get formattedKeyName(): string {
+    const raw = this.keyRootName || formatRootName(this.keyRoot, this.preferFlat);
+    return raw.replace('#', '♯').replace('b', '♭');
   }
 
   private transportTimer: number | null = null;
@@ -798,13 +813,15 @@ export class CircuitChordForge extends LitElement {
       text-align: center;
       border-radius: 3px;
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.6rem;
+      font-size: 0.54rem;
       cursor: pointer;
       user-select: none;
       transition: background 220ms ease, color 220ms ease, box-shadow 220ms ease;
       background: #1c1f24;
       color: #8d919a;
       box-shadow: inset 0 0 0 1px #26282e;
+      white-space: nowrap;
+      overflow: hidden;
     }
 
     .key-root-btn:hover {
@@ -1109,17 +1126,6 @@ export class CircuitChordForge extends LitElement {
         this.keyRoot = firstStep.root;
         this.keyScale = 'chromatic';
 
-        // Optional query param overrides if provided
-        if (urlParams.has('key')) {
-          const keyParam = urlParams.get('key')!;
-          const keyNum = parseInt(keyParam, 10);
-          if (!isNaN(keyNum) && keyNum >= 0 && keyNum <= 11) {
-            this.keyRoot = keyNum;
-          } else {
-            const idx = NOTE_NAMES.indexOf(keyParam.toUpperCase() as any);
-            if (idx >= 0) this.keyRoot = idx;
-          }
-        }
         if (urlParams.has('scale')) {
           const scaleParam = urlParams.get('scale')!.toLowerCase();
           const def = getScaleDefinition(scaleParam);
@@ -1128,6 +1134,29 @@ export class CircuitChordForge extends LitElement {
           const modeParam = urlParams.get('mode')!.toLowerCase();
           this.keyScale = modeParam === 'minor' ? 'natminor' : 'major';
         }
+
+        // Optional query param overrides if provided
+        if (urlParams.has('key')) {
+          const keyParam = urlParams.get('key')!;
+          const parsedKey = parseKeyParam(keyParam);
+          if (parsedKey) {
+            this.keyRoot = parsedKey.keyRoot;
+            this.keyRootName = parsedKey.keyRootName;
+          } else {
+            const keyNum = parseInt(keyParam, 10);
+            if (!isNaN(keyNum) && keyNum >= 0 && keyNum <= 11) {
+              this.keyRoot = keyNum;
+              this.keyRootName = formatRootName(this.keyRoot, preferFlatSpelling(this.keyRoot, this.keyScale));
+            }
+          }
+        } else {
+          // Infer keyRootName from first step or scale
+          const preferFlat = firstStep.originalSymbol && (firstStep.originalSymbol.includes('b') || firstStep.originalSymbol.includes('♭'))
+            ? true
+            : preferFlatSpelling(this.keyRoot, this.keyScale);
+          this.keyRootName = formatRootName(this.keyRoot, preferFlat);
+        }
+
         if (urlParams.has('octave')) {
           const octParam = parseInt(urlParams.get('octave')!, 10);
           if (!isNaN(octParam) && octParam >= 1 && octParam <= 6) {
@@ -1167,6 +1196,11 @@ export class CircuitChordForge extends LitElement {
         } else if (parsed.keyMode === 'major') {
           this.keyScale = 'major';
         }
+        if (typeof parsed.keyRootName === 'string') {
+          this.keyRootName = parsed.keyRootName;
+        } else if (typeof parsed.keyRoot === 'number') {
+          this.keyRootName = formatRootName(this.keyRoot, preferFlatSpelling(this.keyRoot, this.keyScale));
+        }
         if (typeof parsed.octave === 'number') this.octave = Math.max(1, Math.min(6, parsed.octave));
       }
     } catch {
@@ -1180,6 +1214,7 @@ export class CircuitChordForge extends LitElement {
         steps: this.steps,
         active: this.active,
         keyRoot: this.keyRoot,
+        keyRootName: this.keyRootName,
         keyScale: this.keyScale,
         octave: this.octave,
         layout: this.layout
@@ -1230,12 +1265,12 @@ export class CircuitChordForge extends LitElement {
   }
 
   private setStepRoot(root: number) {
-    this.steps = this.steps.map((st, i) => (i === this.active ? { ...st, root } : st));
+    this.steps = this.steps.map((st, i) => (i === this.active ? { ...st, root, originalSymbol: undefined } : st));
     this.persistState();
   }
 
   private setStepQuality(q: string) {
-    this.steps = this.steps.map((st, i) => (i === this.active ? { ...st, q } : st));
+    this.steps = this.steps.map((st, i) => (i === this.active ? { ...st, q, originalSymbol: undefined } : st));
     this.persistState();
   }
 
@@ -1246,7 +1281,14 @@ export class CircuitChordForge extends LitElement {
   }
 
   private setStepChord(root: number, q: string) {
-    this.steps = this.steps.map((st, i) => (i === this.active ? { ...st, root, q } : st));
+    this.steps = this.steps.map((st, i) => (i === this.active ? { ...st, root, q, originalSymbol: undefined } : st));
+    this.persistState();
+  }
+
+  private selectKeyRoot(i: number) {
+    this.keyRoot = i;
+    const shouldFlat = preferFlatSpelling(i, this.keyScale);
+    this.keyRootName = formatRootName(i, shouldFlat);
     this.persistState();
   }
 
@@ -1307,9 +1349,9 @@ export class CircuitChordForge extends LitElement {
     );
 
     const litCount = litMap.size;
-    const chordLabel = getChordLabel(currentStep);
+    const chordLabel = getChordLabel(currentStep, true, this.preferFlat);
     const scaleDef = getScaleDefinition(this.keyScale);
-    const scaleChords = getScaleChords(this.keyRoot, this.keyScale);
+    const scaleChords = getScaleChords(this.keyRoot, this.keyScale, this.preferFlat);
 
     // Track signature change for bloom parity trigger
     const sig = `${currentStep.root}:${currentStep.q}:${this.octave}:${this.layout}:${this.keyRoot}:${this.keyScale}:${this.active}`;
@@ -1336,7 +1378,7 @@ export class CircuitChordForge extends LitElement {
     const pairs = tones.map((t) => {
       const hit = Array.from(litMap.entries()).find(([, lit]) => lit.order === t.order);
       return {
-        pitch: getPitchName(t.midi),
+        pitch: getPitchName(t.midi, this.preferFlat),
         ref: hit ? hit[1].ref : 'off plate',
         deg: DEGREES[t.iv] || 'tone',
         isRoot: t.isRoot
@@ -1370,7 +1412,7 @@ export class CircuitChordForge extends LitElement {
             <!-- Chord Title & Actions -->
             <div class="chord-meta-header">
               <div class="meta-line">
-                STEP ${String(this.active + 1).padStart(2, '0')} / ${String(this.steps.length).padStart(2, '0')}  ·  ${NOTE_NAMES[this.keyRoot]} ${scaleDef.label.toUpperCase()}  ·  ${this.layout === 'chromatic' ? 'CHROMATIC LAYOUT' : 'IN-KEY LAYOUT'}
+                STEP ${String(this.active + 1).padStart(2, '0')} / ${String(this.steps.length).padStart(2, '0')}  ·  ${this.formattedKeyName} ${scaleDef.label.toUpperCase()}  ·  ${this.layout === 'chromatic' ? 'CHROMATIC LAYOUT' : 'IN-KEY LAYOUT'}
               </div>
               <div class="chord-title-row">
                 <div class="chord-name-title">
@@ -1430,7 +1472,7 @@ export class CircuitChordForge extends LitElement {
                       class="step-tile ${isActive ? 'active' : ''}"
                       tabindex="0"
                       role="button"
-                      aria-label="Step ${i + 1}, ${getChordLabel(st)}${isActive ? ', active' : ''}"
+                      aria-label="Step ${i + 1}, ${getChordLabel(st, false, this.preferFlat)}${isActive ? ', active' : ''}"
                       @click=${() => {
                         this.active = i;
                         this.auditionActive();
@@ -1446,7 +1488,7 @@ export class CircuitChordForge extends LitElement {
                       }}
                     >
                       <div class="step-tile-top">
-                        <span class="step-tile-name">${getChordLabel(st)}</span>
+                        <span class="step-tile-name">${getChordLabel(st, false, this.preferFlat)}</span>
                         <span class="step-tile-num">${String(i + 1).padStart(2, '0')}</span>
                       </div>
                       <div class="mini-grid">
@@ -1509,8 +1551,8 @@ export class CircuitChordForge extends LitElement {
                     ${cells.map((c, i) => {
                       const lit = litMap.get(i);
                       const isEmpty = c.midi === null;
-                      const noteName = isEmpty ? '' : NOTE_NAMES[c.midi! % 12];
-                      const isNat = !isEmpty && noteName.length === 1;
+                      const noteName = isEmpty ? '' : (this.preferFlat ? NOTE_NAMES_FLAT[c.midi! % 12] : NOTE_NAMES[c.midi! % 12]);
+                      const isNat = !isEmpty && (noteName.length === 1);
                       const dist = getDistance(c);
 
                       let bg = 'transparent';
@@ -1547,8 +1589,8 @@ export class CircuitChordForge extends LitElement {
                           "
                           tabindex="${isEmpty ? -1 : 0}"
                           role="button"
-                          aria-label="${isEmpty ? 'Empty pad' : `${getPitchName(c.midi!)} row ${c.row} col ${c.col}`}"
-                          title="${isEmpty ? 'no pad' : `${getPitchName(c.midi!)} · row ${c.row} col ${c.col}`}"
+                          aria-label="${isEmpty ? 'Empty pad' : `${getPitchName(c.midi!, this.preferFlat)} row ${c.row} col ${c.col}`}"
+                          title="${isEmpty ? 'no pad' : `${getPitchName(c.midi!, this.preferFlat)} · row ${c.row} col ${c.col}`}"
                           @click=${() => {
                             if (!isEmpty && c.midi !== null) {
                               playNote(c.midi, 0.6);
@@ -1628,50 +1670,50 @@ export class CircuitChordForge extends LitElement {
                 style="grid-column: 2/4;"
                 tabindex="0"
                 role="button"
-                aria-label="C sharp root"
+                aria-label="${this.preferFlat ? 'D flat' : 'C sharp'} root"
                 @click=${() => this.setStepRoot(1)}
               >
-                C♯
+                ${this.preferFlat ? 'D♭' : 'C♯'}
               </div>
               <div
                 class="piano-black-key ${currentStep.root === 3 ? 'active' : ''}"
                 style="grid-column: 4/6;"
                 tabindex="0"
                 role="button"
-                aria-label="D sharp root"
+                aria-label="${this.preferFlat ? 'E flat' : 'D sharp'} root"
                 @click=${() => this.setStepRoot(3)}
               >
-                D♯
+                ${this.preferFlat ? 'E♭' : 'D♯'}
               </div>
               <div
                 class="piano-black-key ${currentStep.root === 6 ? 'active' : ''}"
                 style="grid-column: 8/10;"
                 tabindex="0"
                 role="button"
-                aria-label="F sharp root"
+                aria-label="${this.preferFlat ? 'G flat' : 'F sharp'} root"
                 @click=${() => this.setStepRoot(6)}
               >
-                F♯
+                ${this.preferFlat ? 'G♭' : 'F♯'}
               </div>
               <div
                 class="piano-black-key ${currentStep.root === 8 ? 'active' : ''}"
                 style="grid-column: 10/12;"
                 tabindex="0"
                 role="button"
-                aria-label="G sharp root"
+                aria-label="${this.preferFlat ? 'A flat' : 'G sharp'} root"
                 @click=${() => this.setStepRoot(8)}
               >
-                G♯
+                ${this.preferFlat ? 'A♭' : 'G♯'}
               </div>
               <div
                 class="piano-black-key ${currentStep.root === 10 ? 'active' : ''}"
                 style="grid-column: 12/14;"
                 tabindex="0"
                 role="button"
-                aria-label="A sharp root"
+                aria-label="${this.preferFlat ? 'B flat' : 'A sharp'} root"
                 @click=${() => this.setStepRoot(10)}
               >
-                A♯
+                ${this.preferFlat ? 'B♭' : 'A♯'}
               </div>
             </div>
 
@@ -1757,34 +1799,32 @@ export class CircuitChordForge extends LitElement {
             <div class="key-scale-header">
               <div class="sidebar-title" style="margin:0;">KEY + SCALE</div>
               <div class="key-scale-line">
-                ${NOTE_NAMES[this.keyRoot]} ${scaleDef.label}  ·  ${scaleDef.iv.length} notes
+                ${this.formattedKeyName} ${scaleDef.label}  ·  ${scaleDef.iv.length} notes
               </div>
             </div>
 
             <!-- 12-Root Grid -->
             <div class="key-roots-grid">
-              ${NOTE_NAMES.map((name, i) => {
+              ${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(i => {
                 const isSelected = this.keyRoot === i;
-                const formattedName = name.replace('#', '♯');
+                const sharpName = NOTE_NAMES[i].replace('#', '♯');
+                const flatName = NOTE_NAMES_FLAT[i].replace('b', '♭');
+                const label = sharpName === flatName ? sharpName : `${sharpName}/${flatName}`;
                 return html`
                   <div
                     class="key-root-btn ${isSelected ? 'active' : ''}"
                     tabindex="0"
                     role="button"
-                    aria-label="key root ${name}${isSelected ? ', selected' : ''}"
-                    @click=${() => {
-                      this.keyRoot = i;
-                      this.persistState();
-                    }}
+                    aria-label="key root ${label}${isSelected ? ', selected' : ''}"
+                    @click=${() => this.selectKeyRoot(i)}
                     @keydown=${(e: KeyboardEvent) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        this.keyRoot = i;
-                        this.persistState();
+                        this.selectKeyRoot(i);
                       }
                     }}
                   >
-                    ${formattedName}
+                    ${label}
                   </div>
                 `;
               })}
@@ -1802,12 +1842,20 @@ export class CircuitChordForge extends LitElement {
                     aria-label="${sd.label} scale${isSelected ? ', selected' : ''}"
                     @click=${() => {
                       this.keyScale = sd.id;
+                      if (NOTE_NAMES[this.keyRoot] !== NOTE_NAMES_FLAT[this.keyRoot]) {
+                        const shouldFlat = preferFlatSpelling(this.keyRoot, this.keyScale);
+                        this.keyRootName = formatRootName(this.keyRoot, shouldFlat);
+                      }
                       this.persistState();
                     }}
                     @keydown=${(e: KeyboardEvent) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         this.keyScale = sd.id;
+                        if (NOTE_NAMES[this.keyRoot] !== NOTE_NAMES_FLAT[this.keyRoot]) {
+                          const shouldFlat = preferFlatSpelling(this.keyRoot, this.keyScale);
+                          this.keyRootName = formatRootName(this.keyRoot, shouldFlat);
+                        }
                         this.persistState();
                       }
                     }}

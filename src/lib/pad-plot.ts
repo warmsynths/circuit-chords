@@ -1,5 +1,91 @@
 export const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const;
+export const NOTE_NAMES_FLAT = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'] as const;
 export type NoteName = typeof NOTE_NAMES[number];
+export type NoteNameFlat = typeof NOTE_NAMES_FLAT[number];
+
+export const PITCH_CLASS: Record<string, number> = {
+  'C': 0, 'B#': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+  'E': 4, 'Fb': 4, 'E#': 5, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7,
+  'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11, 'Cb': 11,
+};
+
+const FLAT_MAJOR_PITCH_CLASSES = new Set([1, 3, 5, 8, 10]); // Db, Eb, F, Ab, Bb
+
+export function preferFlatSpelling(keyRootOrName: number | string, scaleId = 'major'): boolean {
+  let rootPc: number;
+  let explicitFlat: boolean | null = null;
+
+  if (typeof keyRootOrName === 'string') {
+    const clean = keyRootOrName.trim();
+    if (clean.includes('b') || clean.includes('♭')) {
+      explicitFlat = true;
+    } else if (clean.includes('#') || clean.includes('♯')) {
+      explicitFlat = false;
+    }
+    const match = clean.match(/^([A-Ga-g])([#♯b♭]?)/);
+    if (match) {
+      const letter = match[1].toUpperCase();
+      const acc = match[2] === '♯' ? '#' : match[2] === '♭' ? 'b' : match[2] || '';
+      rootPc = PITCH_CLASS[`${letter}${acc}`] ?? 0;
+    } else {
+      rootPc = 0;
+    }
+  } else {
+    rootPc = ((keyRootOrName % 12) + 12) % 12;
+  }
+
+  if (explicitFlat !== null) {
+    return explicitFlat;
+  }
+
+  const normScale = (scaleId || 'major').toLowerCase();
+  if (normScale === 'natminor' || normScale === 'minor' || normScale === 'harmmin' || normScale === 'melmin' || normScale === 'minpent' || normScale === 'hungmin') {
+    const parentPc = (rootPc + 3) % 12;
+    return FLAT_MAJOR_PITCH_CLASSES.has(parentPc) || parentPc === 6;
+  }
+  if (normScale === 'dorian' || normScale === 'bebop' || normScale === 'ukrdom') {
+    const parentPc = (rootPc + 10) % 12;
+    return FLAT_MAJOR_PITCH_CLASSES.has(parentPc);
+  }
+  if (normScale === 'phrygian' || normScale === 'todi' || normScale === 'marva') {
+    const parentPc = (rootPc + 8) % 12;
+    return FLAT_MAJOR_PITCH_CLASSES.has(parentPc);
+  }
+  if (normScale === 'mixo') {
+    const parentPc = (rootPc + 5) % 12;
+    return FLAT_MAJOR_PITCH_CLASSES.has(parentPc);
+  }
+
+  return FLAT_MAJOR_PITCH_CLASSES.has(rootPc);
+}
+
+export function formatRootName(keyRoot: number, preferFlat = false): string {
+  const pc = ((keyRoot % 12) + 12) % 12;
+  return preferFlat ? NOTE_NAMES_FLAT[pc] : NOTE_NAMES[pc];
+}
+
+export function parseKeyParam(param: string | null | undefined): { keyRoot: number; keyRootName: string; preferFlat: boolean } | null {
+  if (!param || !param.trim()) return null;
+  const raw = param.trim();
+  const num = parseInt(raw, 10);
+  if (!isNaN(num) && num >= 0 && num <= 11) {
+    const name = NOTE_NAMES[num];
+    return { keyRoot: num, keyRootName: name, preferFlat: false };
+  }
+  const match = raw.match(/^([A-Ga-g])([#♯b♭]?)/);
+  if (!match) return null;
+  const letter = match[1].toUpperCase();
+  const acc = match[2] === '♯' ? '#' : match[2] === '♭' ? 'b' : match[2] || '';
+  const noteStr = `${letter}${acc}`;
+  const pc = PITCH_CLASS[noteStr];
+  if (pc === undefined) return null;
+  const isFlat = acc === 'b';
+  return {
+    keyRoot: pc,
+    keyRootName: noteStr,
+    preferFlat: isFlat || (acc === '' && letter === 'F')
+  };
+}
 
 export interface ChordQuality {
   id: string;
@@ -88,7 +174,7 @@ export interface ScaleChord {
 }
 
 // Triads built dynamically by stacking scale steps — works for any of the 16 scales
-export function getScaleChords(keyRoot: number, keyScale: string): ScaleChord[] {
+export function getScaleChords(keyRoot: number, keyScale: string, preferFlat = false): ScaleChord[] {
   const scDef = getScaleDefinition(keyScale);
   const sc = scDef.iv;
   const n = sc.length;
@@ -113,7 +199,7 @@ export function getScaleChords(keyRoot: number, keyScale: string): ScaleChord[] 
       const upper = q === 'maj' || q === 'aug' || q === 'sus4' || q === 'sus2';
       const roman = upper ? num : num.toLowerCase();
       const chordRoot = (keyRoot + sc[i]) % 12;
-      const rootName = NOTE_NAMES[chordRoot];
+      const rootName = preferFlat ? NOTE_NAMES_FLAT[chordRoot] : NOTE_NAMES[chordRoot];
       const qual = getChordQuality(q);
       const qSuffix = q === 'maj' ? '' : q === 'min' ? 'm' : qual.label;
       const chordSymbol = `${rootName}${qSuffix}`;
@@ -138,6 +224,7 @@ export interface ProgressionStep {
   root: number; // 0..11
   q: string;    // 'maj', 'm7', etc.
   voicing?: StepVoicing;
+  originalSymbol?: string;
 }
 
 export interface VoicedTone {
@@ -161,8 +248,9 @@ export function midiFromOctaveAndSemi(octave: number, semi: number): number {
   return (octave + 1) * 12 + semi;
 }
 
-export function getPitchName(midi: number): string {
-  const noteName = NOTE_NAMES[midi % 12];
+export function getPitchName(midi: number, preferFlat = false): string {
+  const pc = ((midi % 12) + 12) % 12;
+  const noteName = preferFlat ? NOTE_NAMES_FLAT[pc] : NOTE_NAMES[pc];
   const oct = Math.floor(midi / 12) - 1;
   return `${noteName}${oct}`;
 }
@@ -171,11 +259,17 @@ export function getChordQuality(id: string): ChordQuality {
   return QUALS.find(q => q.id === id) || QUALS[0];
 }
 
-export function getChordLabel(step: ProgressionStep, includeVoicing = false): string {
-  const rootName = NOTE_NAMES[step.root];
-  const q = getChordQuality(step.q);
-  const qSuffix = step.q === 'maj' ? '' : step.q === 'min' ? 'm' : q.label;
-  const base = `${rootName}${qSuffix}`;
+export function getChordLabel(step: ProgressionStep, includeVoicing = false, preferFlat = false): string {
+  let base: string;
+  if (step.originalSymbol) {
+    base = step.originalSymbol;
+  } else {
+    const pc = ((step.root % 12) + 12) % 12;
+    const rootName = preferFlat ? NOTE_NAMES_FLAT[pc] : NOTE_NAMES[pc];
+    const q = getChordQuality(step.q);
+    const qSuffix = step.q === 'maj' ? '' : step.q === 'min' ? 'm' : q.label;
+    base = `${rootName}${qSuffix}`;
+  }
   if (!includeVoicing || !step.voicing || step.voicing === 'root') {
     return base;
   }
